@@ -1,0 +1,105 @@
+import { Globe, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import type { HttpCapture } from '../store/replayStore';
+
+function StatusBadge({ code }: { code?: number }) {
+  if (!code) return null;
+  const cls = code >= 500 ? 'badge-error' : code >= 400 ? 'badge-warning' : 'badge-success';
+  return <span className={`badge ${cls}`}>{code}</span>;
+}
+
+function MethodBadge({ method }: { method: string }) {
+  const colors: Record<string, string> = {
+    GET: 'var(--pr-event-function)',
+    POST: 'var(--pr-event-manual)',
+    PUT: 'var(--pr-warning)',
+    DELETE: 'var(--pr-danger)',
+    PATCH: 'var(--pr-event-http)',
+  };
+  return (
+    <span style={{
+      fontFamily: 'var(--font-code)', fontSize: 11, fontWeight: 600,
+      color: colors[method] || 'var(--pr-text-secondary)',
+      minWidth: 36,
+    }}>
+      {method}
+    </span>
+  );
+}
+
+function HttpRow({ capture }: { capture: HttpCapture }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div style={{ borderBottom: '0.5px solid var(--pr-border-subtle)' }}>
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+          cursor: 'pointer', transition: 'background 80ms',
+        }}
+        onClick={() => setExpanded(!expanded)}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--pr-depth-3)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+      >
+        {expanded ? <ChevronDown size={12} color="var(--pr-text-tertiary)" /> : <ChevronRight size={12} color="var(--pr-text-tertiary)" />}
+        <MethodBadge method={capture.method} />
+        <span style={{
+          flex: 1, fontFamily: 'var(--font-code)', fontSize: 12,
+          color: 'var(--pr-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {capture.url}
+        </span>
+        <StatusBadge code={capture.statusCode} />
+        {capture.duration && (
+          <span style={{ fontFamily: 'var(--font-code)', fontSize: 11, color: capture.duration > 200 ? 'var(--pr-warning)' : 'var(--pr-text-tertiary)' }}>
+            {capture.duration}ms
+          </span>
+        )}
+      </div>
+
+      {expanded && (
+        <div style={{ padding: '8px 12px 12px 32px', fontSize: 12 }}>
+          {capture.requestBody && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Request Body</div>
+              <pre style={{
+                fontFamily: 'var(--font-code)', fontSize: 11, color: 'var(--pr-text-secondary)',
+                background: 'var(--pr-depth-1)', padding: 8, borderRadius: 'var(--radius-sm)',
+                overflow: 'auto', maxHeight: 120,
+              }}>
+                {JSON.stringify(capture.requestBody, null, 2)}
+              </pre>
+            </div>
+          )}
+          {capture.responseBody && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Response Body</div>
+              <pre style={{
+                fontFamily: 'var(--font-code)', fontSize: 11, color: 'var(--pr-text-secondary)',
+                background: 'var(--pr-depth-1)', padding: 8, borderRadius: 'var(--radius-sm)',
+                overflow: 'auto', maxHeight: 120,
+              }}>
+                {JSON.stringify(capture.responseBody, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function NetworkPanel({ captures }: { captures: HttpCapture[] }) {
+  return (
+    <div style={{ overflow: 'auto', flex: 1 }}>
+      {captures.length === 0 ? (
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--pr-text-tertiary)', fontSize: 13 }}>
+          <Globe size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+          No HTTP requests captured
+        </div>
+      ) : (
+        captures.map(c => <HttpRow key={c.id} capture={c} />)
+      )}
+    </div>
+  );
+}
