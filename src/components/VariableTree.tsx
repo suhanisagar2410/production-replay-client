@@ -92,7 +92,8 @@ function VarRow({ node, path, depth }: { node: VarNode; path: string; depth: num
 }
 
 export default function VariableTree() {
-  const variables = mockVariables as VarNode[];
+  const { variables: liveVariables } = useReplayStore();
+  const variables = liveVariables.length > 0 ? (liveVariables as VarNode[]) : (mockVariables as VarNode[]);
 
   return (
     <div style={{ overflow: 'auto', flex: 1 }}>
@@ -105,7 +106,6 @@ export default function VariableTree() {
       }}>
         <span style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 'var(--type-display-md)',
           fontWeight: 600,
           color: 'var(--pr-text-primary)',
           fontSize: 13,

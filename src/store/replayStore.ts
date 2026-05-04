@@ -140,9 +140,44 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
     const { currentReplay } = get();
     if (!currentReplay) return;
     const clamped = Math.max(0, Math.min(pos, currentReplay.events.length - 1));
+
+    // Calculate variables and callStack up to position T
+    const eventsUpToCursor = currentReplay.events.slice(0, clamped + 1);
+
+    // Call stack: find most recent stack frames
+    const callStack: any[] = [];
+    eventsUpToCursor.forEach(e => {
+      if (e.type === 'function_call') {
+        callStack.push({
+          id: e.id,
+          functionName: String(e.data?.name || 'anonymous'),
+          fileName: String(e.data?.file || 'unknown'),
+          lineNumber: Number(e.data?.line || 0),
+          columnNumber: 0,
+          args: e.data?.args || {},
+        });
+      }
+    });
+
+    // Variables: most recent local variables
+    const variablesMap = new Map<string, any>();
+    eventsUpToCursor.forEach(e => {
+      if (e.type === 'function_call' && e.data?.args) {
+        Object.entries(e.data.args).forEach(([k, v]) => {
+          variablesMap.set(k, {
+            name: k,
+            value: v,
+            type: typeof v === 'object' ? 'object' : 'string',
+          });
+        });
+      }
+    });
+
     set({
       cursorPosition: clamped,
       selectedEvent: currentReplay.events[clamped] || null,
+      callStack,
+      variables: Array.from(variablesMap.values()),
     });
   },
 

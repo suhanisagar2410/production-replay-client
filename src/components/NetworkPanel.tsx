@@ -59,7 +59,7 @@ function HttpRow({ capture }: { capture: HttpCapture }) {
 
       {expanded && (
         <div style={{ padding: '8px 12px 12px 32px', fontSize: 12 }}>
-          {capture.requestBody && (
+          {capture.requestBody !== undefined && capture.requestBody !== null && (
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Request Body</div>
               <pre style={{
@@ -71,7 +71,7 @@ function HttpRow({ capture }: { capture: HttpCapture }) {
               </pre>
             </div>
           )}
-          {capture.responseBody && (
+          {capture.responseBody !== undefined && capture.responseBody !== null && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Response Body</div>
               <pre style={{

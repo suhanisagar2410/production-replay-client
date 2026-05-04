@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, AlertCircle } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
-import type { ExecutionEvent } from '../store/replayStore';
+
 
 const EVENT_COLORS: Record<string, string> = {
   function_call: 'var(--pr-event-function)',
@@ -37,13 +37,14 @@ export default function Timeline() {
     return () => clearInterval(interval);
   }, [isPlaying, stepForward]);
 
-  /* Click-to-seek on track */
-  const handleTrackClick = useCallback((e: React.MouseEvent) => {
+  const isDragging = useRef(false);
+
+  const seekToPosition = useCallback((clientX: number) => {
     if (!trackRef.current || events.length === 0) return;
     const rect = trackRef.current.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const targetTime = baseTime + pct * totalDuration;
-    // find closest event
+
     let closest = 0;
     let minDist = Infinity;
     events.forEach((evt, i) => {
@@ -52,6 +53,31 @@ export default function Timeline() {
     });
     setCursorPosition(closest);
   }, [events, baseTime, totalDuration, setCursorPosition]);
+
+  /* Dragging event handlers */
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    seekToPosition(e.clientX);
+  }, [seekToPosition]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        requestAnimationFrame(() => {
+          seekToPosition(e.clientX);
+        });
+      }
+    };
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [seekToPosition]);
 
   const cursorPct = useMemo(() => {
     if (events.length === 0) return 0;
@@ -116,7 +142,7 @@ export default function Timeline() {
       {/* Main Track */}
       <div
         ref={trackRef}
-        onClick={handleTrackClick}
+        onMouseDown={handleMouseDown}
         style={{
           flex: 1,
           background: 'var(--pr-depth-2)',

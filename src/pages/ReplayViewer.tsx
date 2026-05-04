@@ -12,7 +12,7 @@ import QueryPanel from '../components/QueryPanel';
 export default function ReplayViewer() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentReplay, setCurrentReplay, cursorPosition, selectedEvent, fetchReplayById } = useReplayStore();
+  const { currentReplay, setCurrentReplay, cursorPosition, fetchReplayById } = useReplayStore();
   const [rightTab, setRightTab] = useState<'http' | 'db' | 'events'>('http');
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, AlertCircle, Globe, Database, Zap, Clock, ChevronRight, Activity } from 'lucide-react';
+import { Search, Filter, AlertCircle, Globe, Zap, Clock, ChevronRight, Activity } from 'lucide-react';
 import { mockReplays } from '../data/mockData';
 import { formatDistanceToNow } from 'date-fns';
 import { useReplayStore } from '../store/replayStore';
