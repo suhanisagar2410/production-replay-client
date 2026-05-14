@@ -216,7 +216,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   fetchReplays: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch('http://localhost:4000/api/replays');
+      const res = await fetch('http://13.61.174.212:4000/api/replays');
       if (res.ok) {
         const liveReplays = await res.json();
         set({ replays: liveReplays });
@@ -230,7 +230,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   fetchReplayById: async (id: string) => {
     set({ isLoading: true });
     try {
-      const res = await fetch(`http://localhost:4000/api/replays/${id}`);
+      const res = await fetch(`http://13.61.174.212:4000/api/replays/${id}`);
       if (res.ok) {
         const fullReplay = await res.json();
         set({ currentReplay: fullReplay, cursorPosition: 0 });
