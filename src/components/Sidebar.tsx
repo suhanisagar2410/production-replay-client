@@ -1,10 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutList, Settings, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const user = useAuthStore((state) => state.user);
 
   const navItems = [
     { path: '/replays', icon: LayoutList, label: 'Replays' },
@@ -146,18 +148,65 @@ export default function Sidebar() {
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      {/* Version info */}
-      {!collapsed && (
-        <div style={{
-          padding: '12px 16px',
-          borderTop: '0.5px solid var(--pr-border-subtle)',
-          fontSize: 11,
-          color: 'var(--pr-text-tertiary)',
-          fontFamily: 'var(--font-code)',
-        }}>
-          v0.1.0-alpha
-        </div>
-      )}
+      {/* User Profile */}
+      <div style={{
+        padding: collapsed ? '12px 8px' : '16px',
+        borderTop: '0.5px solid var(--pr-border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        {user ? (
+          <>
+            <img 
+              src={user.avatarUrl} 
+              alt={user.name} 
+              style={{
+                width: collapsed ? 24 : 32,
+                height: collapsed ? 24 : 32,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '1px solid var(--pr-border-medium)',
+                flexShrink: 0,
+                margin: collapsed ? '0 auto' : '0'
+              }}
+            />
+            {!collapsed && (
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--pr-text-primary)',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden'
+                }}>
+                  {user.name}
+                </div>
+                <div style={{
+                  fontSize: 11,
+                  color: 'var(--pr-text-tertiary)',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden'
+                }}>
+                  {user.email}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{
+            fontSize: 11,
+            color: 'var(--pr-text-tertiary)',
+            fontFamily: 'var(--font-code)',
+            textAlign: collapsed ? 'center' : 'left',
+            width: '100%'
+          }}>
+            {!collapsed ? 'Loading profile...' : '...'}
+          </div>
+        )}
+      </div>
     </aside>
   );
 }
