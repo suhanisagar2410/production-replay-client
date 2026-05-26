@@ -11,7 +11,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const setToken = useAuthStore(state => state.setToken);
+  const login = useAuthStore(state => state.login);
   const navigate = useNavigate();
 
   const handleSocialLogin = (provider: 'github' | 'google') => {
@@ -37,10 +37,11 @@ export default function Login() {
       if (!res.ok) {
         setError(data.error || 'Authentication failed');
       } else {
-        setToken(data.token);
+        login(data.token, data.user);
         navigate('/');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

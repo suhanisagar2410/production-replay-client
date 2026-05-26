@@ -216,14 +216,11 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   fetchReplays: async () => {
     set({ isLoading: true });
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const res = await fetch(`${baseUrl}/replays`);
-      if (res.ok) {
-        const liveReplays = await res.json();
-        set({ replays: liveReplays });
-      }
+      const { fetchReplays: apiFetchReplays } = await import('../api');
+      const liveReplays = await apiFetchReplays();
+      set({ replays: liveReplays });
     } catch (err) {
-      console.warn('Live server is unreachable, continuing with fallback.', err);
+      console.warn('Live server is unreachable or unauthorized, continuing with fallback.', err);
     } finally {
       set({ isLoading: false });
     }
@@ -231,12 +228,9 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   fetchReplayById: async (id: string) => {
     set({ isLoading: true });
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const res = await fetch(`${baseUrl}/replays/${id}`);
-      if (res.ok) {
-        const fullReplay = await res.json();
-        set({ currentReplay: fullReplay, cursorPosition: 0 });
-      }
+      const { fetchReplayById: apiFetchReplayById } = await import('../api');
+      const fullReplay = await apiFetchReplayById(id);
+      set({ currentReplay: fullReplay as any, cursorPosition: 0 });
     } catch (err) {
       console.error('Failed to load specific replay by ID', err);
     } finally {
