@@ -93,7 +93,7 @@ function VarRow({ node, path, depth }: { node: VarNode; path: string; depth: num
 
 export default function VariableTree() {
   const { variables: liveVariables } = useReplayStore();
-  const variables = liveVariables.length > 0 ? (liveVariables as VarNode[]) : (mockVariables as VarNode[]);
+  const variables = liveVariables as VarNode[];
 
   return (
     <div style={{ overflow: 'auto', flex: 1 }}>

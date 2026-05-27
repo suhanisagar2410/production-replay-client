@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Key, Copy, Check, Code, Shield, AlertTriangle, Plus, FolderSync, ChevronRight, Search } from 'lucide-react';
-import { fetchProjects, createProject } from '../api';
+import { Key, Copy, Check, Code, Plus, FolderSync, ChevronRight, Search, User, LogOut, Mail, Calendar } from 'lucide-react';
+import { fetchProjects, createProject, fetchMe } from '../api';
+import { useAuthStore } from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const [copied, setCopied] = useState(false);
@@ -9,16 +11,21 @@ export default function Settings() {
   const [newProjectName, setNewProjectName] = useState('');
   const [creating, setCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  // If activeProjectId is null, we assume we are showing the Profile page
+  const [activeTab, setActiveTab] = useState<'profile' | 'project'>('profile');
 
   useEffect(() => {
     fetchProjects().then(data => {
       setProjects(data);
-      if (data.length > 0) setActiveProjectId(data[0].id);
     });
   }, []);
 
   const activeProject = projects.find(p => p.id === activeProjectId);
-  const apiKey = activeProject ? activeProject.apiKey : 'Create a project first...';
+  const apiKey = activeProject ? activeProject.apiKey : '';
 
   const copyKey = () => {
     if (!activeProject) return;
@@ -35,6 +42,7 @@ export default function Settings() {
       const p = await createProject(newProjectName);
       setProjects([...projects, p]);
       setActiveProjectId(p.id);
+      setActiveTab('project');
       setNewProjectName('');
       setSearchQuery('');
     } catch (err) {
@@ -42,6 +50,21 @@ export default function Settings() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+      const token = useAuthStore.getState().token;
+      await fetch(`${baseUrl}/logout`, { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (e) {}
+    logout();
+    navigate('/login');
   };
 
   const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -55,17 +78,17 @@ export default function Settings() {
           fontFamily: 'var(--font-display)', fontSize: 'var(--type-display-xl)', fontWeight: 700,
           color: 'var(--pr-text-primary)', marginBottom: 6,
         }}>
-          Projects & Settings
+          Settings
         </h1>
         <p style={{ fontSize: 'var(--type-body-sm)', color: 'var(--pr-text-secondary)', margin: 0 }}>
-          Manage your projects and API keys for the SDK
+          Manage your account and project SDK integrations
         </p>
       </div>
 
       {/* Main Layout */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Left Sidebar - Projects List */}
+        {/* Left Sidebar */}
         <div style={{ 
           width: 280, 
           borderRight: '1px solid var(--pr-border-soft)',
@@ -74,10 +97,38 @@ export default function Settings() {
           flexDirection: 'column',
           overflowY: 'auto'
         }}>
-          <div style={{ padding: '24px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FolderSync size={16} color="var(--pr-accent-primary)" />
+          
+          <div style={{ padding: '16px' }}>
+            <button 
+              onClick={() => setActiveTab('profile')}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid',
+                borderColor: activeTab === 'profile' ? 'var(--pr-border-medium)' : 'transparent',
+                background: activeTab === 'profile' ? 'var(--pr-depth-1)' : 'transparent',
+                color: activeTab === 'profile' ? 'var(--pr-text-primary)' : 'var(--pr-text-secondary)',
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: activeTab === 'profile' ? 600 : 500,
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease',
+                boxShadow: activeTab === 'profile' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <User size={16} color={activeTab === 'profile' ? 'var(--pr-accent-primary)' : 'var(--pr-text-tertiary)'} />
+              Account Profile
+            </button>
+          </div>
+
+          <div style={{ padding: '8px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FolderSync size={16} color="var(--pr-text-tertiary)" />
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--pr-text-tertiary)' }}>
-              Your Projects
+              Projects
             </span>
           </div>
 
@@ -111,19 +162,19 @@ export default function Settings() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {filteredProjects.map(p => {
-                  const isActive = p.id === activeProjectId;
+                  const isActive = activeTab === 'project' && p.id === activeProjectId;
                   return (
                     <button 
                       key={p.id}
-                      onClick={() => setActiveProjectId(p.id)}
+                      onClick={() => { setActiveProjectId(p.id); setActiveTab('project'); }}
                       style={{
-                        padding: '12px 16px',
+                        padding: '10px 16px',
                         borderRadius: 'var(--radius-md)',
                         border: 'none',
                         background: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                         color: isActive ? 'var(--pr-text-primary)' : 'var(--pr-text-secondary)',
                         cursor: 'pointer',
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: isActive ? 600 : 500,
                         textAlign: 'left',
                         display: 'flex',
@@ -191,70 +242,139 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Right Side - Project Details */}
-        <div style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
-          {!activeProject ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pr-text-tertiary)' }}>
-              Select or create a project to view settings
+        {/* Right Side - Content */}
+        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+          
+          {activeTab === 'profile' && user && (
+            <div style={{ maxWidth: 500 }} className="stagger-item">
+              <h2 style={{ fontSize: 24, color: 'var(--pr-text-primary)', marginBottom: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="Avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--pr-border-soft)' }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--pr-accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {user.name}
+              </h2>
+
+              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 24, background: 'var(--pr-depth-1)', border: '1px solid var(--pr-border-soft)' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20, color: 'var(--pr-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <User size={16} color="var(--pr-text-tertiary)" />
+                  Personal Information
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Full Name</label>
+                    <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {user.name}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Email Address</label>
+                    <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Mail size={14} color="var(--pr-text-tertiary)" /> {user.email}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Member Since</label>
+                    <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Calendar size={14} color="var(--pr-text-tertiary)" /> {new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 24, background: 'var(--pr-depth-1)', border: '1px solid var(--pr-border-soft)' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: 'var(--pr-text-primary)' }}>Danger Zone</h3>
+                <p style={{ fontSize: 13, color: 'var(--pr-text-tertiary)', marginBottom: 20 }}>
+                  Log out of your current session. You will need to re-authenticate to access your projects.
+                </p>
+                <button 
+                  onClick={handleLogout}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--pr-danger-bg)',
+                    color: 'var(--pr-danger)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--pr-danger-bg)'}
+                >
+                  <LogOut size={16} /> Log Out
+                </button>
+              </div>
             </div>
-          ) : (
-            <div style={{ maxWidth: 600 }}>
-              
-              <h2 style={{ fontSize: 20, color: 'var(--pr-text-primary)', marginBottom: 24, fontWeight: 600 }}>
-                {activeProject.name} Settings
+          )}
+
+          {activeTab === 'project' && activeProject && (
+            <div style={{ maxWidth: 600 }} className="stagger-item">
+              <h2 style={{ fontSize: 24, color: 'var(--pr-text-primary)', marginBottom: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <FolderSync size={24} color="var(--pr-accent-primary)" />
+                {activeProject.name}
               </h2>
 
               {/* API Key */}
-              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 24, background: 'var(--pr-depth-1)', border: '1px solid var(--pr-border-soft)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <Key size={16} color="var(--pr-warning)" />
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600 }}>API Key</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600 }}>API Key</span>
                 </div>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 8,
-                  background: 'var(--pr-depth-1)', padding: '8px 12px',
-                  borderRadius: 'var(--radius-md)', border: '0.5px solid var(--pr-border-soft)',
+                  background: 'var(--pr-depth-0)', padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--pr-border-medium)',
                 }}>
-                  <code style={{ fontFamily: 'var(--font-code)', fontSize: 12, color: 'var(--pr-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <code style={{ fontFamily: 'var(--font-code)', fontSize: 13, color: 'var(--pr-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {apiKey}
                   </code>
                   <button className="btn btn-ghost btn-xs" onClick={copyKey} style={{ gap: 4 }}>
                     {copied ? <><Check size={12} color="var(--pr-success)" /> Copied</> : <><Copy size={12} /> Copy</>}
                   </button>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--pr-text-tertiary)', marginTop: 8 }}>
+                <p style={{ fontSize: 12, color: 'var(--pr-text-tertiary)', marginTop: 12 }}>
                   This key authenticates your SDK with the Production Replay API. Keep it secret.
                 </p>
               </div>
 
               {/* SDK Install */}
-              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div className="elevation-2" style={{ borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 24, background: 'var(--pr-depth-1)', border: '1px solid var(--pr-border-soft)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <Code size={16} color="var(--pr-event-function)" />
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600 }}>Install SDK</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600 }}>Install SDK</span>
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                     Step 1 — Install
                   </div>
                   <pre style={{
                     fontFamily: 'var(--font-code)', fontSize: 13, color: 'var(--pr-event-function)',
-                    background: 'var(--pr-depth-1)', padding: 12, borderRadius: 'var(--radius-md)',
-                    border: '0.5px solid var(--pr-border-soft)',
+                    background: 'var(--pr-depth-0)', padding: 14, borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--pr-border-medium)',
                   }}>
                     npm install production-replay
                   </pre>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                     Step 2 — Initialize
                   </div>
                   <pre style={{
                     fontFamily: 'var(--font-code)', fontSize: 13, color: 'var(--pr-text-secondary)',
-                    background: 'var(--pr-depth-1)', padding: 12, borderRadius: 'var(--radius-md)',
-                    border: '0.5px solid var(--pr-border-soft)', lineHeight: 1.6,
+                    background: 'var(--pr-depth-0)', padding: 14, borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--pr-border-medium)', lineHeight: 1.6,
                   }}>
 {`const replay = require('production-replay');
 

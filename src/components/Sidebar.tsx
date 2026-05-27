@@ -149,17 +149,33 @@ export default function Sidebar() {
       </button>
 
       {/* User Profile */}
-      <div style={{
-        padding: collapsed ? '12px 8px' : '16px',
-        borderTop: '0.5px solid var(--pr-border-subtle)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-      }}>
+      <button 
+        onClick={() => {
+          // If we are already on settings, it might not reset the tab, but it's a good start.
+          // The best way in React Router is to use a Link or navigate.
+          window.location.href = '/settings';
+        }}
+        style={{
+          padding: collapsed ? '12px 8px' : '16px',
+          borderTop: '0.5px solid var(--pr-border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: 'transparent',
+          border: 'none',
+          borderTop: '0.5px solid var(--pr-border-subtle)',
+          cursor: 'pointer',
+          textAlign: 'left',
+          width: '100%',
+          transition: 'background 150ms var(--ease-smooth)',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--pr-depth-2)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
         {user ? (
           <>
             <img 
-              src={user.avatarUrl} 
+              src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.name}`} 
               alt={user.name} 
               style={{
                 width: collapsed ? 24 : 32,
@@ -206,7 +222,7 @@ export default function Sidebar() {
             {!collapsed ? 'Loading profile...' : '...'}
           </div>
         )}
-      </div>
+      </button>
     </aside>
   );
 }

@@ -16,10 +16,7 @@ export default function ReplayViewer() {
   const [rightTab, setRightTab] = useState<'http' | 'db' | 'events'>('http');
 
   useEffect(() => {
-    const replay = mockReplays.find(r => r.id === id);
-    if (replay) {
-      setCurrentReplay(replay);
-    } else if (id) {
+    if (id) {
       fetchReplayById(id);
     }
     return () => setCurrentReplay(null);

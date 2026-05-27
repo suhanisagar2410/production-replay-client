@@ -138,15 +138,9 @@ export default function ReplayList() {
     fetchReplays();
   }, [fetchReplays]);
 
-  // Merge live replays with mock replays to always show data, removing any duplicates by ID
+  // Always show data from API only
   const allReplays = useMemo(() => {
-    const combined = [...replays];
-    mockReplays.forEach(mock => {
-      if (!combined.some(r => r.id === mock.id)) {
-        combined.push(mock);
-      }
-    });
-    return combined;
+    return replays;
   }, [replays]);
 
   const filtered = useMemo(() => {

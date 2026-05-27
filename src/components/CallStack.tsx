@@ -1,10 +1,8 @@
 import { FileCode, ChevronRight } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
-import { mockCallStack } from '../data/mockData';
 
 export default function CallStack() {
-  const { callStack: liveFrames } = useReplayStore();
-  const frames = liveFrames.length > 0 ? liveFrames : mockCallStack;
+  const { callStack: frames } = useReplayStore();
 
   return (
     <div style={{ overflow: 'auto' }}>
