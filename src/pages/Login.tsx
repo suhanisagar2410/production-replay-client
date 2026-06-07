@@ -105,15 +105,7 @@ export default function Login() {
           
           {/* Mobile Logo Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48, justifyContent: 'center', '@media (minWidth: 768px)': { display: 'none' } } as any}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: 'linear-gradient(135deg, var(--pr-accent-primary) 0%, #a855f7 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, borderRadius: 8 }} />
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--pr-text-primary)' }}>
               Production Replay
             </span>

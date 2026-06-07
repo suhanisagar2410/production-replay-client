@@ -48,7 +48,7 @@ export default function Landing() {
         zIndex: 100
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Terminal size={24} color="var(--pr-accent-primary)" />
+          <img src="/logo.png" alt="Production Replay" style={{ width: 28, height: 28, borderRadius: 6 }} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
             Production<span style={{ color: 'var(--pr-accent-primary)' }}>Replay</span>
           </span>
@@ -188,7 +188,7 @@ export default function Landing() {
         fontSize: 14
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Terminal size={18} /> Production Replay Inc. © {new Date().getFullYear()}
+          <img src="/logo.png" alt="Logo" style={{ width: 18, height: 18, borderRadius: 4 }} /> Production Replay Inc. &copy; {new Date().getFullYear()}
         </div>
         <div style={{ display: 'flex', gap: 24 }}>
           <span style={{ cursor: 'pointer' }}>Documentation</span>

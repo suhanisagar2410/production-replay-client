@@ -39,21 +39,7 @@ export default function Sidebar() {
           minHeight: 60,
         }}
       >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, var(--pr-accent-primary), #818CF8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 16px var(--pr-accent-glow)',
-            flexShrink: 0,
-          }}
-        >
-          <Zap size={16} color="#fff" strokeWidth={2.5} />
-        </div>
+        <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, borderRadius: 'var(--radius-md)', flexShrink: 0, boxShadow: '0 0 16px var(--pr-accent-glow)' }} />
         {!collapsed && (
           <div style={{ overflow: 'hidden' }}>
             <div style={{
