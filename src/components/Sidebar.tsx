@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutList, Settings, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutList, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 

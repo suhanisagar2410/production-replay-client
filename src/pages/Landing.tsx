@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Terminal, Clock, Shield, Zap, ChevronRight, PlayCircle, Lock } from 'lucide-react';
+import { Clock, Shield, Zap, ChevronRight, PlayCircle, Lock } from 'lucide-react';
 
 export default function Landing() {
   const navigate = useNavigate();
