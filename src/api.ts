@@ -61,6 +61,21 @@ export async function fetchReplayById(id: string): Promise<ReplayPayload> {
   return res.json();
 }
 
+export async function fetchTraceReplays(id: string): Promise<ReplayMetadata[]> {
+  const res = await fetch(`${API_BASE_URL}/replays/${id}/trace`, { headers: getHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch trace replays');
+  return res.json();
+}
+
+export async function deleteAllReplays(): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/replays`, { 
+    method: 'DELETE',
+    headers: getHeaders() 
+  });
+  if (!res.ok) throw new Error('Failed to delete replays');
+  return res.json();
+}
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 export async function fetchMe() {

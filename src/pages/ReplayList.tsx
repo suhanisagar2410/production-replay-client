@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, AlertCircle, Globe, Zap, Clock, ChevronRight, Activity } from 'lucide-react';
+import { Search, Filter, AlertCircle, Globe, Zap, Clock, ChevronRight, Activity, Trash2 } from 'lucide-react';
 import { mockReplays } from '../data/mockData';
 import { formatDistanceToNow } from 'date-fns';
 import { useReplayStore } from '../store/replayStore';
 import type { Replay } from '../store/replayStore';
+import Onboarding from './Onboarding';
 
 const triggerConfig: Record<string, { color: string; icon: typeof AlertCircle; label: string; badgeClass: string }> = {
   uncaught_exception: { color: 'var(--pr-event-error)', icon: AlertCircle, label: 'Exception', badgeClass: 'badge-error' },
@@ -132,7 +133,9 @@ function ReplayCard({ replay, index }: { replay: Replay; index: number }) {
 export default function ReplayList() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  const { replays, fetchReplays } = useReplayStore();
+  const [filterEnv, setFilterEnv] = useState<string>('all');
+  const [filterService, setFilterService] = useState<string>('all');
+  const { replays, fetchReplays, isLoading } = useReplayStore();
 
   useEffect(() => {
     fetchReplays();
@@ -143,6 +146,16 @@ export default function ReplayList() {
     return replays;
   }, [replays]);
 
+  const environments = useMemo(() => {
+    const envs = new Set(allReplays.map(r => r.environment).filter(Boolean));
+    return ['all', ...Array.from(envs)];
+  }, [allReplays]);
+
+  const services = useMemo(() => {
+    const srvs = new Set(allReplays.map(r => r.serviceName).filter(Boolean));
+    return ['all', ...Array.from(srvs)];
+  }, [allReplays]);
+
   const filtered = useMemo(() => {
     return allReplays.filter(r => {
       const matchSearch = !search ||
@@ -150,44 +163,88 @@ export default function ReplayList() {
         r.serviceName.toLowerCase().includes(search.toLowerCase()) ||
         r.triggerLabel?.toLowerCase().includes(search.toLowerCase());
       const matchFilter = filterType === 'all' || r.triggerType === filterType;
-      return matchSearch && matchFilter;
+      const matchEnv = filterEnv === 'all' || r.environment === filterEnv;
+      const matchService = filterService === 'all' || r.serviceName === filterService;
+      return matchSearch && matchFilter && matchEnv && matchService;
     });
-  }, [allReplays, search, filterType]);
+  }, [allReplays, search, filterType, filterEnv, filterService]);
 
   const filterOptions = [
     { value: 'all', label: 'All' },
     { value: 'uncaught_exception', label: 'Exceptions' },
     { value: 'http_error', label: 'HTTP Errors' },
+    { value: 'performance', label: 'Performance' },
     { value: 'manual', label: 'Manual' },
   ];
+
+  if (!isLoading && allReplays.length === 0 && !search && filterType === 'all' && filterEnv === 'all' && filterService === 'all') {
+    return <Onboarding />;
+  }
 
   return (
     <div className="panel-enter" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '24px 32px', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{
-          fontFamily: 'var(--font-display)', fontSize: 'var(--type-display-xl)', fontWeight: 700,
-          color: 'var(--pr-text-primary)', marginBottom: 6,
-        }}>
-          Replays
-        </h1>
-        <p style={{ fontSize: 'var(--type-body-sm)', color: 'var(--pr-text-secondary)' }}>
-          {allReplays.length} captured replays across all services
-        </p>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{
+            fontFamily: 'var(--font-display)', fontSize: 'var(--type-display-xl)', fontWeight: 700,
+            color: 'var(--pr-text-primary)', marginBottom: 6,
+          }}>
+            Replays
+          </h1>
+          <p style={{ fontSize: 'var(--type-body-sm)', color: 'var(--pr-text-secondary)' }}>
+            {allReplays.length} captured replays across all services
+          </p>
+        </div>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => {
+            if (window.confirm('Are you sure you want to clear all replays? This action cannot be undone.')) {
+              useReplayStore.getState().clearAllReplays();
+            }
+          }}
+          disabled={allReplays.length === 0}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, borderColor: 'var(--pr-event-error)', color: 'var(--pr-event-error)' }}
+        >
+          <Trash2 size={14} />
+          Clear All
+        </button>
       </div>
 
       {/* Search + Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 400 }}>
           <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--pr-text-tertiary)' }} />
           <input
             className="input"
             placeholder="Search replays..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 32 }}
+            style={{ paddingLeft: 32, width: '100%' }}
           />
         </div>
+
+        <select 
+          className="input" 
+          style={{ width: 'auto', paddingRight: 32 }}
+          value={filterEnv}
+          onChange={e => setFilterEnv(e.target.value)}
+        >
+          {environments.map(env => (
+            <option key={env} value={env}>{env === 'all' ? 'All Environments' : env}</option>
+          ))}
+        </select>
+
+        <select 
+          className="input" 
+          style={{ width: 'auto', paddingRight: 32 }}
+          value={filterService}
+          onChange={e => setFilterService(e.target.value)}
+        >
+          {services.map(srv => (
+            <option key={srv} value={srv}>{srv === 'all' ? 'All Services' : srv}</option>
+          ))}
+        </select>
 
         <div className="tab-list" style={{ padding: 3 }}>
           {filterOptions.map(opt => (

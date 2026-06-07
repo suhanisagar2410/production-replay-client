@@ -66,6 +66,7 @@ export interface Replay {
   errorStack?: string;
   serviceName: string;
   environment: 'production' | 'staging' | 'development';
+  traceId?: string;
   durationMs: number;
   eventCount: number;
   capturedAt: string;
@@ -94,6 +95,10 @@ interface ReplayState {
   selectedEvent: ExecutionEvent | null;
   selectedStackFrame: StackFrame | null;
 
+  /* Distributed Tracing */
+  traceReplays: Replay[];
+  fetchTraceReplays: (id: string) => Promise<void>;
+
   /* Variable inspector */
   variables: VariableState[];
   callStack: StackFrame[];
@@ -116,6 +121,7 @@ interface ReplayState {
   toggleVariableExpand: (path: string) => void;
   fetchReplays: () => Promise<void>;
   fetchReplayById: (id: string) => Promise<void>;
+  clearAllReplays: () => Promise<void>;
 }
 
 export const useReplayStore = create<ReplayState>((set, get) => ({
@@ -131,6 +137,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   variables: [],
   callStack: [],
   expandedVariables: new Set(),
+  traceReplays: [],
 
   setCurrentReplay: (replay) => set({ currentReplay: replay, cursorPosition: 0, isPlaying: false }),
   setReplays: (replays) => set({ replays }),
@@ -235,6 +242,25 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
       console.error('Failed to load specific replay by ID', err);
     } finally {
       set({ isLoading: false });
+    }
+  },
+  fetchTraceReplays: async (id: string) => {
+    try {
+      const { fetchTraceReplays: apiFetchTraceReplays } = await import('../api');
+      const traces = await apiFetchTraceReplays(id);
+      set({ traceReplays: traces as any[] });
+    } catch (err) {
+      console.error('Failed to load trace replays', err);
+      set({ traceReplays: [] });
+    }
+  },
+  clearAllReplays: async () => {
+    try {
+      const { deleteAllReplays } = await import('../api');
+      await deleteAllReplays();
+      set({ replays: [], currentReplay: null });
+    } catch (err) {
+      console.error('Failed to clear replays', err);
     }
   },
 }));

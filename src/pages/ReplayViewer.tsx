@@ -12,7 +12,7 @@ import QueryPanel from '../components/QueryPanel';
 export default function ReplayViewer() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentReplay, setCurrentReplay, cursorPosition, fetchReplayById } = useReplayStore();
+  const { currentReplay, setCurrentReplay, cursorPosition, fetchReplayById, traceReplays, fetchTraceReplays } = useReplayStore();
   const [rightTab, setRightTab] = useState<'http' | 'db' | 'events'>('http');
 
   useEffect(() => {
@@ -21,6 +21,12 @@ export default function ReplayViewer() {
     }
     return () => setCurrentReplay(null);
   }, [id, setCurrentReplay, fetchReplayById]);
+
+  useEffect(() => {
+    if (currentReplay?.id) {
+      fetchTraceReplays(currentReplay.id);
+    }
+  }, [currentReplay?.id, fetchTraceReplays]);
 
   if (!currentReplay) {
     return (
@@ -88,6 +94,32 @@ export default function ReplayViewer() {
         <span style={{ fontFamily: 'var(--font-code)', color: 'var(--pr-text-tertiary)' }}>
           {currentReplay.durationMs}ms
         </span>
+
+        {traceReplays.length > 1 && (
+          <>
+            <span style={{ color: 'var(--pr-border-medium)' }}>·</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color: 'var(--pr-text-tertiary)', fontSize: 10, textTransform: 'uppercase', marginRight: 4 }}>Trace chain:</span>
+              {traceReplays.map(tr => (
+                <button
+                  key={tr.id}
+                  onClick={() => navigate(`/replays/${tr.id}`)}
+                  className={`badge ${tr.id === currentReplay.id ? '' : 'badge-neutral'}`}
+                  style={{ 
+                    cursor: 'pointer', transition: 'all 0.2s', 
+                    opacity: tr.id === currentReplay.id ? 1 : 0.6,
+                    background: tr.id === currentReplay.id ? 'var(--pr-accent-primary)' : '',
+                    color: tr.id === currentReplay.id ? 'white' : ''
+                  }}
+                  title={`View replay for ${tr.serviceName}`}
+                >
+                  <Server size={10} style={{ marginRight: 4 }} />
+                  {tr.serviceName}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <div style={{ flex: 1 }} />
 

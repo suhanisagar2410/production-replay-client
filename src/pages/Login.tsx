@@ -38,7 +38,7 @@ export default function Login() {
         setError(data.error || 'Authentication failed');
       } else {
         login(data.token, data.user);
-        navigate('/');
+        navigate('/replays');
       }
     } catch (err) {
       console.error('Login error:', err);

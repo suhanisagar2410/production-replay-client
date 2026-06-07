@@ -8,6 +8,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 
 import { fetchMe } from './api';
+import Landing from './pages/Landing';
 
 // A wrapper component that forces users to login
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -68,34 +69,36 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         
         {/* Protected Routes */}
-        <Route path="/" element={
+        <Route path="/replays" element={
           <AuthGuard>
             <ProtectedLayout>
-              <Routes>
-                <Route path="/" element={<Navigate to="/replays" replace />} />
-                <Route path="/replays" element={<ReplayList />} />
-                <Route path="/replays/:id" element={<ReplayViewer />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
+              <ReplayList />
             </ProtectedLayout>
           </AuthGuard>
         } />
         
-        {/* Catch all for nested protected routes (since we have a nested <Routes> above) */}
-        <Route path="/*" element={
+        <Route path="/replays/:id" element={
           <AuthGuard>
             <ProtectedLayout>
-              <Routes>
-                <Route path="/replays" element={<ReplayList />} />
-                <Route path="/replays/:id" element={<ReplayViewer />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
+              <ReplayViewer />
             </ProtectedLayout>
           </AuthGuard>
         } />
+        
+        <Route path="/settings" element={
+          <AuthGuard>
+            <ProtectedLayout>
+              <Settings />
+            </ProtectedLayout>
+          </AuthGuard>
+        } />
+        
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
