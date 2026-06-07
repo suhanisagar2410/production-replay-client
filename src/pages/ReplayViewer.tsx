@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlertCircle, Clock, Server, Share2, ArrowLeft, Globe, Database, Activity } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
-import { mockReplays } from '../data/mockData';
 import Timeline from '../components/Timeline';
 import VariableTree from '../components/VariableTree';
 import CallStack from '../components/CallStack';
@@ -28,7 +27,7 @@ export default function ReplayViewer() {
     }
   }, [currentReplay?.id, fetchTraceReplays]);
 
-  if (!currentReplay) {
+  if (!currentReplay || !currentReplay.events || !currentReplay.httpCaptures || !currentReplay.dbQueries) {
     return (
       <div style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -327,7 +326,7 @@ export default function ReplayViewer() {
                         {info?.label || evt.type}
                       </span>
                       <span style={{ fontFamily: 'var(--font-code)', fontSize: 10, color: 'var(--pr-text-tertiary)' }}>
-                        +{(evt.timestamp - (currentReplay.events[0]?.timestamp || 0)).toFixed(0)}ms
+                        +{(evt.timestamp - (currentReplay.events![0]?.timestamp || 0)).toFixed(0)}ms
                       </span>
                     </div>
                   );

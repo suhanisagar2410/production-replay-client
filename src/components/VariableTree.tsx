@@ -1,6 +1,5 @@
 import { ChevronRight } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
-import { mockVariables } from '../data/mockData';
 
 interface VarNode {
   name: string;

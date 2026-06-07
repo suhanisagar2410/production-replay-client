@@ -60,19 +60,19 @@ export interface DbQuery {
 export interface Replay {
   id: string;
   projectId: string;
-  triggerType: 'uncaught_exception' | 'unhandled_rejection' | 'http_error' | 'manual' | 'performance';
+  triggerType: string;
   triggerLabel?: string;
   errorMessage?: string;
   errorStack?: string;
   serviceName: string;
-  environment: 'production' | 'staging' | 'development';
+  environment: string;
   traceId?: string;
   durationMs: number;
   eventCount: number;
   capturedAt: string;
-  events: ExecutionEvent[];
-  httpCaptures: HttpCapture[];
-  dbQueries: DbQuery[];
+  events?: ExecutionEvent[];
+  httpCaptures?: HttpCapture[];
+  dbQueries?: DbQuery[];
 }
 
 /* ============================================================
@@ -145,7 +145,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
 
   setCursorPosition: (pos) => {
     const { currentReplay } = get();
-    if (!currentReplay) return;
+    if (!currentReplay || !currentReplay.events) return;
     const clamped = Math.max(0, Math.min(pos, currentReplay.events.length - 1));
 
     // Calculate variables and callStack up to position T
@@ -200,7 +200,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
 
   jumpToError: () => {
     const { currentReplay } = get();
-    if (!currentReplay) return;
+    if (!currentReplay || !currentReplay.events) return;
     const errorIdx = currentReplay.events.findIndex(e => e.type === 'error');
     if (errorIdx >= 0) get().setCursorPosition(errorIdx);
   },
@@ -208,7 +208,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   jumpToStart: () => get().setCursorPosition(0),
   jumpToEnd: () => {
     const { currentReplay } = get();
-    if (currentReplay) get().setCursorPosition(currentReplay.events.length - 1);
+    if (currentReplay && currentReplay.events) get().setCursorPosition(currentReplay.events.length - 1);
   },
 
   togglePlaying: () => set(s => ({ isPlaying: !s.isPlaying })),

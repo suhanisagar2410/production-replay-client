@@ -62,7 +62,7 @@ export default function Login() {
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center'
-      }}>
+      } as any}>
         {/* Abstract background elements */}
         <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50%', height: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', filter: 'blur(60px)' }}></div>
         <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '50%', height: '50%', background: 'radial-gradient(circle, rgba(236,72,153,0.1) 0%, transparent 70%)', filter: 'blur(60px)' }}></div>

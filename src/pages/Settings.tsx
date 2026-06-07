@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Key, Copy, Check, Code, Plus, FolderSync, ChevronRight, Search, User, LogOut, Mail, Calendar } from 'lucide-react';
-import { fetchProjects, createProject, fetchMe } from '../api';
+import { fetchProjects, createProject } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -280,7 +280,7 @@ export default function Settings() {
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--pr-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Member Since</label>
                     <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Calendar size={14} color="var(--pr-text-tertiary)" /> {new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                      <Calendar size={14} color="var(--pr-text-tertiary)" /> {new Date(user.createdAt || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                     </div>
                   </div>
                 </div>

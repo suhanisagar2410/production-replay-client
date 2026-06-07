@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Terminal, CheckCircle2, Code, Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
 import { fetchProjects } from '../api';
 

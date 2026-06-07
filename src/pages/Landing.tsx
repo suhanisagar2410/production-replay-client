@@ -14,7 +14,7 @@ export default function Landing() {
     const token = params.get('session_token');
     
     if (token) {
-      login(token, null);
+      login(token, undefined);
       navigate('/replays', { replace: true });
     } else if (isLoggedIn) {
       navigate('/replays', { replace: true });

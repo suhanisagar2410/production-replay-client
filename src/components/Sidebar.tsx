@@ -157,7 +157,6 @@ export default function Sidebar() {
         }}
         style={{
           padding: collapsed ? '12px 8px' : '16px',
-          borderTop: '0.5px solid var(--pr-border-subtle)',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
