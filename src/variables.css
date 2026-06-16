@@ -1,0 +1,157 @@
+/* ============================================================
+   PRODUCTION REPLAY — ZINC DARK DESIGN SYSTEM
+   Based on shadcn/zinc — minimal, professional, developer-first
+   ============================================================ */
+
+/* === GOOGLE FONTS === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* === ZINC COLOR TOKENS === */
+:root {
+  /* Backgrounds — true zinc dark */
+  --bg:  #09090B;   /* True black — body, outermost shell */
+  --bg2: #111113;   /* Sidebar, panel headers, nav */
+  --bg3: #18181B;   /* Cards, inputs, hover states */
+  --bg4: #1C1C1F;   /* Active, pressed states */
+
+  /* Borders */
+  --border:  #27272A;   /* All borders, dividers */
+  --border2: #3F3F46;   /* Hover borders, focused borders */
+
+  /* Typography */
+  --text:  #FAFAFA;   /* Primary — headings, values */
+  --text2: #A1A1AA;   /* Secondary — labels, descriptions */
+  --text3: #52525B;   /* Muted — hints, timestamps, counts */
+
+  /* Accent: Blue */
+  --blue:     #60A5FA;   /* Primary accent — active states, links */
+  --blue-dim: #1E3A5F;   /* Blue backgrounds, selected states */
+
+  /* Semantic: Red / Error */
+  --red:     #F87171;   /* Errors, crashes, destructive */
+  --red-dim: #3B0000;   /* Error backgrounds */
+
+  /* Semantic: Green / Success */
+  --green:     #4ADE80;   /* Success, healthy services */
+  --green-dim: #052E16;   /* Success backgrounds */
+
+  /* Semantic: Amber / Warning */
+  --amber:     #FBBF24;   /* Warnings, slow queries */
+  --amber-dim: #2D1B00;   /* Warning backgrounds */
+
+  /* Semantic: Purple / Special */
+  --purple:     #C084FC;   /* DB queries, AI analysis */
+  --purple-dim: #2E1065;   /* Purple backgrounds */
+
+  /* Typography scale */
+  --text-xl:  20px;   /* Page titles */
+  --text-lg:  16px;   /* Section sub-headings */
+  --text-md:  14px;   /* Section headings */
+  --text-sm:  13px;   /* Body text */
+  --text-xs:  12px;   /* Navigation items */
+  --text-xxs: 11px;   /* Labels, hints */
+
+  /* Font families */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'ui-monospace', 'Cascadia Code', 'Fira Code', monospace;
+
+  /* Border radius */
+  --radius-sm: 4px;    /* Badges, pills */
+  --radius-md: 6px;    /* Buttons, inputs */
+  --radius-lg: 8px;    /* Cards, panels */
+
+  /* Easing */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ================================================================
+     BACKWARDS-COMPAT ALIASES — maps old tokens to new zinc tokens
+     so existing components continue to work during migration
+     ================================================================ */
+  --pr-depth-0: var(--bg);
+  --pr-depth-1: var(--bg2);
+  --pr-depth-2: var(--bg3);
+  --pr-depth-3: var(--bg4);
+  --pr-depth-4: #222226;
+  --pr-depth-5: #2a2a30;
+
+  --pr-border-subtle: rgba(255,255,255,0.04);
+  --pr-border-soft:   var(--border);
+  --pr-border-medium: var(--border2);
+  --pr-border-strong: #52525B;
+  --pr-border-focus:  var(--blue);
+
+  --pr-text-primary:   var(--text);
+  --pr-text-secondary: var(--text2);
+  --pr-text-tertiary:  var(--text3);
+  --pr-text-disabled:  #3f3f46;
+
+  --pr-accent-primary:     var(--blue);
+  --pr-accent-primary-dim: var(--blue-dim);
+  --pr-accent-glow:        rgba(96,165,250,0.12);
+  --pr-accent-glow-strong: rgba(96,165,250,0.25);
+
+  --pr-success:    var(--green);
+  --pr-success-bg: var(--green-dim);
+  --pr-warning:    var(--amber);
+  --pr-warning-bg: var(--amber-dim);
+  --pr-danger:     var(--red);
+  --pr-danger-bg:  var(--red-dim);
+  --pr-info:       var(--blue);
+  --pr-info-bg:    var(--blue-dim);
+
+  --pr-event-error:    var(--red);
+  --pr-event-http:     var(--blue);
+  --pr-event-database: var(--purple);
+  --pr-event-manual:   var(--green);
+  --pr-event-redis:    var(--green);
+  --pr-event-perf:     var(--amber);
+  --pr-event-function: var(--text3);
+
+  /* Font compat */
+  --font-display: var(--font-sans);
+  --font-body:    var(--font-sans);
+  --font-code:    var(--font-mono);
+
+  /* Type scale compat */
+  --type-display-xl: 24px;
+  --type-display-lg: 20px;
+  --type-display-md: 16px;
+  --type-label-lg:   var(--text-md);
+  --type-label-md:   var(--text-sm);
+  --type-label-sm:   var(--text-xxs);
+  --type-body-lg:    15px;
+  --type-body-md:    var(--text-sm);
+  --type-body-sm:    var(--text-sm);
+  --type-code-md:    12px;
+  --type-code-sm:    11px;
+
+  /* Radius compat */
+  --radius-xl:   var(--radius-lg);
+  --radius-full: 9999px;
+
+  /* Ease compat */
+  --ease-smooth:  var(--ease);
+  --ease-spring:  cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-enter:   cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit:    cubic-bezier(0.4, 0, 1, 1);
+
+  /* Duration compat */
+  --duration-instant:   80ms;
+  --duration-fast:      150ms;
+  --duration-standard:  250ms;
+  --duration-slow:      400ms;
+  --duration-cinematic: 700ms;
+
+  /* Spacing */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+}

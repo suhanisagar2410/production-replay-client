@@ -1,213 +1,228 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutList, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, List, Zap, Settings, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+
+const navSections = [
+  {
+    label: 'Overview',
+    items: [
+      { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/replays',   icon: List,            label: 'Replays' },
+    ],
+  },
+  {
+    label: 'Tools',
+    items: [
+      { path: '/settings', icon: Settings, label: 'Settings' },
+    ],
+  },
+];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
-  const navItems = [
-    { path: '/replays', icon: LayoutList, label: 'Replays' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
-  ];
+  const isActive = (path: string) =>
+    path === '/replays'
+      ? location.pathname.startsWith('/replays')
+      : location.pathname === path || location.pathname.startsWith(path + '/');
+
+  const W = collapsed ? 52 : 200;
 
   return (
     <aside
-      className="elevation-1"
       style={{
-        width: collapsed ? 56 : 200,
-        minWidth: collapsed ? 56 : 200,
+        width: W,
+        minWidth: W,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 250ms var(--ease-smooth), min-width 250ms var(--ease-smooth)',
-        borderRight: '0.5px solid var(--pr-border-soft)',
+        background: 'var(--bg2)',
+        borderRight: '1px solid var(--border)',
+        transition: `width 200ms var(--ease), min-width 200ms var(--ease)`,
         position: 'relative',
         zIndex: 20,
+        overflow: 'hidden',
       }}
     >
-      {/* Logo */}
+      {/* ── Logo ─────────────────────────────── */}
       <div
         style={{
-          padding: collapsed ? '16px 12px' : '20px 16px',
+          padding: collapsed ? '14px 0' : '14px 12px',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          borderBottom: '0.5px solid var(--pr-border-subtle)',
-          minHeight: 60,
+          gap: 8,
+          borderBottom: '1px solid var(--border)',
+          minHeight: 52,
+          justifyContent: collapsed ? 'center' : 'flex-start',
         }}
       >
-        <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, borderRadius: 'var(--radius-md)', flexShrink: 0, boxShadow: '0 0 16px var(--pr-accent-glow)' }} />
+        <div style={{
+          width: 24, height: 24, borderRadius: 6,
+          background: 'var(--blue)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Zap size={13} color="#fff" />
+        </div>
         {!collapsed && (
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 15,
-              color: 'var(--pr-text-primary)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.1,
-            }}>
-              Production
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 500,
-              fontSize: 11,
-              color: 'var(--pr-accent-primary)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}>
-              Replay
-            </div>
-          </div>
+          <span style={{
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 600,
+            fontSize: 14,
+            color: 'var(--text)',
+            letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+          }}>
+            Production Replay
+          </span>
         )}
       </div>
 
-      {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {navItems.map(item => {
-          const isActive = location.pathname.startsWith(item.path);
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: collapsed ? '8px 12px' : '8px 12px',
-                borderRadius: 'var(--radius-md)',
-                textDecoration: 'none',
-                color: isActive ? 'var(--pr-text-primary)' : 'var(--pr-text-tertiary)',
-                background: isActive ? 'var(--pr-depth-3)' : 'transparent',
-                fontSize: 13,
-                fontWeight: 500,
-                transition: 'all 150ms var(--ease-smooth)',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.color = 'var(--pr-text-secondary)';
-                  e.currentTarget.style.background = 'var(--pr-depth-2)';
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.color = 'var(--pr-text-tertiary)';
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <item.icon size={16} />
-              {!collapsed && <span>{item.label}</span>}
-            </NavLink>
-          );
-        })}
+      {/* ── Navigation ───────────────────────── */}
+      <nav style={{ flex: 1, padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+        {navSections.map((section) => (
+          <div key={section.label}>
+            {/* Section label */}
+            {!collapsed && (
+              <div style={{
+                fontSize: 11, fontWeight: 500, color: 'var(--text3)',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+                padding: '0 6px', marginBottom: 4,
+              }}>
+                {section.label}
+              </div>
+            )}
+            {/* Nav items */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {section.items.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    title={collapsed ? item.label : undefined}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: collapsed ? '6px 0' : '6px 8px',
+                      borderRadius: 6,
+                      textDecoration: 'none',
+                      fontSize: 13,
+                      fontWeight: active ? 500 : 400,
+                      color: active ? 'var(--text)' : 'var(--text2)',
+                      background: active ? 'var(--bg3)' : 'transparent',
+                      border: active ? '1px solid var(--border2)' : '1px solid transparent',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      transition: 'background 120ms, color 120ms, border-color 120ms',
+                    }}
+                    onMouseEnter={e => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'var(--bg3)';
+                        e.currentTarget.style.color = 'var(--text)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text2)';
+                      }
+                    }}
+                  >
+                    <item.icon size={15} style={{ flexShrink: 0 }} />
+                    {!collapsed && <span>{item.label}</span>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Collapse toggle */}
+      {/* ── Collapse Toggle ───────────────────── */}
       <button
         onClick={() => setCollapsed(!collapsed)}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         style={{
           position: 'absolute',
-          right: -12,
+          right: -10,
           top: '50%',
           transform: 'translateY(-50%)',
-          width: 24,
-          height: 24,
-          borderRadius: 'var(--radius-full)',
-          background: 'var(--pr-depth-3)',
-          border: '0.5px solid var(--pr-border-medium)',
-          color: 'var(--pr-text-secondary)',
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          background: 'var(--bg3)',
+          border: '1px solid var(--border2)',
+          color: 'var(--text3)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          zIndex: 10,
-          transition: 'all 150ms',
+          zIndex: 30,
         }}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
       </button>
 
-      {/* User Profile */}
-      <button 
-        onClick={() => {
-          // If we are already on settings, it might not reset the tab, but it's a good start.
-          // The best way in React Router is to use a Link or navigate.
-          window.location.href = '/settings';
-        }}
-        style={{
-          padding: collapsed ? '12px 8px' : '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          background: 'transparent',
-          border: 'none',
-          borderTop: '0.5px solid var(--pr-border-subtle)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          width: '100%',
-          transition: 'background 150ms var(--ease-smooth)',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--pr-depth-2)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
+      {/* ── User Footer ──────────────────────── */}
+      <div style={{
+        borderTop: '1px solid var(--border)',
+        padding: collapsed ? '10px 0' : '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+      }}>
         {user ? (
           <>
-            <img 
-              src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.name}`} 
-              alt={user.name} 
+            <img
+              src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1E3A5F&color=60A5FA&size=64`}
+              alt={user.name}
+              title={collapsed ? `${user.name} — ${user.email}` : undefined}
               style={{
-                width: collapsed ? 24 : 32,
-                height: collapsed ? 24 : 32,
-                borderRadius: '50%',
+                width: 28, height: 28, borderRadius: '50%',
                 objectFit: 'cover',
-                border: '1px solid var(--pr-border-medium)',
+                border: '1px solid var(--border)',
                 flexShrink: 0,
-                margin: collapsed ? '0 auto' : '0'
               }}
             />
             {!collapsed && (
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'var(--pr-text-primary)',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden'
-                }}>
+              <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {user.name}
                 </div>
-                <div style={{
-                  fontSize: 11,
-                  color: 'var(--pr-text-tertiary)',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden'
-                }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {user.email}
                 </div>
               </div>
             )}
+            {!collapsed && (
+              <button
+                onClick={() => { logout(); navigate('/login'); }}
+                title="Sign out"
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: 'var(--text3)', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text3)'}
+              >
+                <LogOut size={13} />
+              </button>
+            )}
           </>
         ) : (
-          <div style={{
-            fontSize: 11,
-            color: 'var(--pr-text-tertiary)',
-            fontFamily: 'var(--font-code)',
-            textAlign: collapsed ? 'center' : 'left',
-            width: '100%'
-          }}>
-            {!collapsed ? 'Loading profile...' : '...'}
+          <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
+            {collapsed ? '...' : 'Loading...'}
           </div>
         )}
-      </button>
+      </div>
     </aside>
   );
 }

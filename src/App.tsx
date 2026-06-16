@@ -6,7 +6,7 @@ import ReplayList from './pages/ReplayList';
 import ReplayViewer from './pages/ReplayViewer';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
-
+import Dashboard from './pages/Dashboard';
 import { fetchMe } from './api';
 import Landing from './pages/Landing';
 
@@ -19,13 +19,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for session_token in URL (GitHub redirect)
+    // Check for session_token in URL (GitHub OAuth redirect)
     const params = new URLSearchParams(location.search);
     const token = params.get('session_token');
-    
     if (token) {
       login(token);
-      // Clean up the URL by removing the query param
       navigate(location.pathname, { replace: true });
     }
   }, [location, login, navigate]);
@@ -34,8 +32,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoggedIn) {
       fetchMe().then((data) => {
         if (data.user) setUser(data.user);
-      }).catch(err => {
-        console.error("Failed to fetch user profile", err);
+      }).catch((err) => {
+        console.error('Failed to fetch user profile', err);
       });
     }
   }, [isLoggedIn, setUser]);
@@ -47,18 +45,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Protected layout with the sidebar
+// Protected layout — sidebar + main content
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: 'flex',
       height: '100vh',
       width: '100vw',
-      background: 'var(--pr-depth-0)',
+      background: 'var(--bg)',
       overflow: 'hidden',
     }}>
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
         {children}
       </main>
     </div>
@@ -69,10 +67,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
-        
-        {/* Protected Routes */}
+
+        {/* Protected */}
+        <Route path="/dashboard" element={
+          <AuthGuard>
+            <ProtectedLayout>
+              <Dashboard />
+            </ProtectedLayout>
+          </AuthGuard>
+        } />
+
         <Route path="/replays" element={
           <AuthGuard>
             <ProtectedLayout>
@@ -80,7 +87,7 @@ export default function App() {
             </ProtectedLayout>
           </AuthGuard>
         } />
-        
+
         <Route path="/replays/:id" element={
           <AuthGuard>
             <ProtectedLayout>
@@ -88,7 +95,7 @@ export default function App() {
             </ProtectedLayout>
           </AuthGuard>
         } />
-        
+
         <Route path="/settings" element={
           <AuthGuard>
             <ProtectedLayout>
@@ -96,9 +103,9 @@ export default function App() {
             </ProtectedLayout>
           </AuthGuard>
         } />
-        
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        {/* Catch-all — redirect logged-in users to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
