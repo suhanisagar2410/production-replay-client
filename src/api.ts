@@ -99,3 +99,25 @@ export async function createProject(name: string) {
   if (!res.ok) throw new Error('Failed to create project');
   return res.json();
 }
+
+export interface DashboardStats {
+  totalReplays: number;
+  prevTotalReplays: number;
+  errorRate: number;
+  prevErrorRate: number;
+  p95ResponseTime: number;
+  prevP95ResponseTime: number;
+  avgResolveTime: number;
+  replaysByDay: { label: string; total: number; errors: number }[];
+  triggerBreakdown: { type: string; count: number }[];
+  topEndpoints: { endpoint: string; count: number }[];
+  responseTimeBuckets: { label: string; count: number }[];
+  dbQueryPerf: { table: string; avgMs: number }[];
+}
+
+export async function fetchStats(range: '24h' | '7d' | '30d'): Promise<DashboardStats> {
+  const res = await fetch(`${API_BASE_URL}/stats?range=${range}`, { headers: getHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch stats');
+  return res.json();
+}
+
