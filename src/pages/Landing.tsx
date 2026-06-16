@@ -25,9 +25,17 @@ export default function Landing() {
     navigate('/login');
   };
 
+  // Prevent flash of landing page when returning from OAuth
+  const hasToken = new URLSearchParams(window.location.search).get('session_token');
+  if (hasToken) {
+    return <div style={{ minHeight: '100vh', background: 'var(--pr-depth-0)' }} />;
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
+      height: '100vh',
+      overflowY: 'auto',
       background: 'var(--pr-depth-0)',
       color: 'var(--pr-text-primary)',
       fontFamily: 'var(--font-sans)',
@@ -125,19 +133,20 @@ export default function Landing() {
             Start your free trial <ChevronRight size={20} />
           </button>
           
-          <button 
+          <a 
+            href="#setup-guide"
             style={{
               padding: '16px 32px', fontSize: 18, fontWeight: 600,
               background: 'var(--pr-depth-1)', color: 'var(--pr-text-primary)',
               border: '1px solid var(--pr-border-soft)', borderRadius: 'var(--radius-md)', 
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
-              transition: 'background 0.2s'
+              transition: 'background 0.2s', textDecoration: 'none'
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--pr-depth-2)'}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--pr-depth-1)'}
           >
-            <PlayCircle size={20} /> Watch Demo
-          </button>
+            <PlayCircle size={20} /> Developer Setup
+          </a>
         </div>
 
         <div style={{ marginTop: 32, fontSize: 14, color: 'var(--pr-text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -174,6 +183,70 @@ export default function Landing() {
             <p style={{ color: 'var(--pr-text-secondary)', lineHeight: 1.6 }}>All replay data is compressed and encrypted before it leaves your servers. You have full control over data retention policies and what gets captured.</p>
           </div>
 
+        </div>
+
+        {/* Installation Section */}
+        <div id="setup-guide" style={{
+          marginTop: 120, width: '100%', maxWidth: 900,
+          background: 'rgba(9, 9, 11, 0.4)', border: '1px solid var(--pr-border-soft)',
+          borderRadius: 'var(--radius-xl)', padding: '64px',
+          textAlign: 'left', position: 'relative', overflow: 'hidden',
+          scrollMarginTop: '100px'
+        }}>
+          {/* subtle glow */}
+          <div style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: 0 }} />
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 700, marginBottom: 16 }}>
+              Get started in <span style={{ color: 'var(--pr-accent-primary)' }}>2 minutes</span>
+            </h2>
+            <p style={{ color: 'var(--pr-text-secondary)', fontSize: 18, marginBottom: 48, lineHeight: 1.6 }}>
+              No complex setup or infrastructure changes required. Install the SDK and start capturing replays instantly.
+            </p>
+
+            {/* Step 1 */}
+            <div style={{ display: 'flex', gap: 24, marginBottom: 40 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(99, 102, 241, 0.1)', color: 'var(--pr-accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                1
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Install the SDK</h3>
+                <pre style={{
+                  background: 'var(--pr-depth-0)', padding: 16, borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--pr-border-medium)', color: 'var(--pr-event-function)',
+                  fontFamily: 'var(--font-code)', fontSize: 14
+                }}>
+                  npm install @production-replay/sdk
+                </pre>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(99, 102, 241, 0.1)', color: 'var(--pr-accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                2
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Initialize in your app</h3>
+                <p style={{ color: 'var(--pr-text-secondary)', marginBottom: 16, fontSize: 15, lineHeight: 1.6 }}>
+                  Add this to the very top of your application entry point (e.g. <code>index.js</code> or <code>server.ts</code>).
+                </p>
+                <pre style={{
+                  background: 'var(--pr-depth-0)', padding: 20, borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--pr-border-medium)', color: 'var(--pr-text-secondary)',
+                  fontFamily: 'var(--font-code)', fontSize: 14, lineHeight: 1.6
+                }}>
+{`const replay = require('@production-replay/sdk').replay;
+
+replay.init({
+  apiKey: 'pr_live_sk_your_api_key_here',
+  serviceName: 'my-node-service',
+  environment: 'production'
+});`}
+                </pre>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 

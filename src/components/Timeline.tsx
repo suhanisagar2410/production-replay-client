@@ -87,7 +87,7 @@ export default function Timeline() {
   }, [events, cursorPosition, baseTime, totalDuration]);
 
   const currentTime = events[cursorPosition]?.timestamp;
-  const errorIndex = events.findIndex(e => e.type === 'error');
+  const errorIndex = events.findIndex(e => e.type === 'error' || e.type === 'v8_crash_snapshot');
 
   return (
     <div style={{
@@ -118,9 +118,9 @@ export default function Timeline() {
                 left: `${pct}%`,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: evt.type === 'error' ? 4 : 2,
-                height: evt.type === 'error' ? 14 : 8,
-                background: EVENT_COLORS[evt.type] || 'var(--pr-event-function)',
+                width: (evt.type === 'error' || evt.type === 'v8_crash_snapshot') ? 4 : 2,
+                height: (evt.type === 'error' || evt.type === 'v8_crash_snapshot') ? 14 : 8,
+                background: EVENT_COLORS[evt.type] || 'var(--pr-event-error)',
                 borderRadius: 1,
                 opacity: 0.7,
               }}
@@ -156,7 +156,7 @@ export default function Timeline() {
         {/* Event dots */}
         {events.map((evt, i) => {
           const pct = ((evt.timestamp - baseTime) / totalDuration) * 100;
-          const isError = evt.type === 'error';
+          const isError = evt.type === 'error' || evt.type === 'v8_crash_snapshot';
           return (
             <div
               key={i}
@@ -168,8 +168,9 @@ export default function Timeline() {
                 transform: 'translateY(-50%)',
                 width: isError ? 6 : evt.type.startsWith('http') || evt.type.startsWith('db') ? 4 : 3,
                 height: isError ? 6 : evt.type.startsWith('http') || evt.type.startsWith('db') ? 16 : 12,
-                background: EVENT_COLORS[evt.type] || 'var(--pr-event-function)',
+                background: EVENT_COLORS[evt.type] || 'var(--pr-event-error)',
                 borderRadius: isError ? '50%' : 2,
+                boxShadow: isError ? '0 0 12px 2px rgba(239, 68, 68, 0.8)' : 'none',
                 cursor: 'pointer',
                 transition: 'transform 80ms',
                 zIndex: isError ? 5 : 1,

@@ -27,6 +27,53 @@ export default function ReplayViewer() {
     }
   }, [currentReplay?.id, fetchTraceReplays]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+      const store = useReplayStore.getState();
+      switch (e.key) {
+        case 'r':
+        case 'R':
+          store.jumpToError();
+          break;
+        case ' ':
+          e.preventDefault();
+          store.togglePlaying();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          store.stepBackward();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          store.stepForward();
+          break;
+        case 'k':
+          if (e.metaKey || e.ctrlKey) {
+            e.preventDefault();
+            navigate('/replays'); // Go to list where search is
+          }
+          break;
+        case 'Escape':
+          navigate('/replays');
+          break;
+        case '1':
+          setRightTab('http');
+          break;
+        case '2':
+          setRightTab('db');
+          break;
+        case '3':
+          setRightTab('events');
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   if (!currentReplay || !currentReplay.events || !currentReplay.httpCaptures || !currentReplay.dbQueries) {
     return (
       <div style={{
@@ -47,6 +94,7 @@ export default function ReplayViewer() {
     db_query_start: { label: 'DB Query', color: 'var(--pr-event-database)' },
     db_query_end: { label: 'DB Result', color: 'var(--pr-event-database)' },
     error: { label: 'Error', color: 'var(--pr-event-error)' },
+    v8_crash_snapshot: { label: 'V8 Crash', color: 'var(--pr-event-error)' },
     manual_capture: { label: 'Manual', color: 'var(--pr-event-manual)' },
     redis_command: { label: 'Redis', color: 'var(--pr-event-redis)' },
   };
@@ -122,6 +170,20 @@ export default function ReplayViewer() {
 
         <div style={{ flex: 1 }} />
 
+        {currentReplay.events.some(e => e.type === 'error' || e.type === 'v8_crash_snapshot') && (
+          <button 
+            className="btn" 
+            onClick={() => useReplayStore.getState().jumpToError()}
+            style={{ 
+              background: 'var(--pr-danger)', color: 'white', border: 'none',
+              display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, padding: '4px 12px',
+              boxShadow: '0 0 12px rgba(239,68,68,0.4)',
+            }}
+          >
+            Jump to Error &rarr;
+          </button>
+        )}
+
         <button className="btn btn-ghost btn-xs" style={{ gap: 4 }}>
           <Share2 size={12} /> Share
         </button>
@@ -178,7 +240,7 @@ export default function ReplayViewer() {
                 </div>
 
                 {/* Error display */}
-                {currentEvent.type === 'error' && (
+                {(currentEvent.type === 'error' || currentEvent.type === 'v8_crash_snapshot') && (
                   <div style={{
                     background: 'var(--pr-danger-bg)',
                     border: '0.5px solid rgba(239,68,68,0.3)',
@@ -190,13 +252,13 @@ export default function ReplayViewer() {
                       fontFamily: 'var(--font-code)', fontSize: 14, fontWeight: 600,
                       color: 'var(--pr-danger)', marginBottom: 8,
                     }}>
-                      {(currentEvent.data as any).name}: {(currentEvent.data as any).message}
+                      {(currentEvent.data as any).name || (currentEvent.data as any).reason || 'Error'}: {(currentEvent.data as any).message || 'Process crashed'}
                     </div>
                     <pre style={{
                       fontFamily: 'var(--font-code)', fontSize: 11, color: 'var(--pr-text-secondary)',
                       whiteSpace: 'pre-wrap', lineHeight: 1.6,
                     }}>
-                      {(currentEvent.data as any).stack}
+                      {(currentEvent.data as any).stack || JSON.stringify((currentEvent.data as any).callStack, null, 2)}
                     </pre>
                   </div>
                 )}

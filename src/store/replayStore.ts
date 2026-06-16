@@ -4,7 +4,7 @@ import { create } from 'zustand';
    TYPES — Execution Events & Replay Data
    ============================================================ */
 
-export type EventType = 'function_call' | 'http_request' | 'http_response' | 'db_query_start' | 'db_query_end' | 'error' | 'manual_capture' | 'redis_command';
+export type EventType = 'function_call' | 'http_request' | 'http_response' | 'db_query_start' | 'db_query_end' | 'error' | 'manual_capture' | 'redis_command' | 'v8_crash_snapshot';
 
 export interface ExecutionEvent {
   id: string;
@@ -201,7 +201,7 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   jumpToError: () => {
     const { currentReplay } = get();
     if (!currentReplay || !currentReplay.events) return;
-    const errorIdx = currentReplay.events.findIndex(e => e.type === 'error');
+    const errorIdx = currentReplay.events.findIndex(e => e.type === 'error' || e.type === 'v8_crash_snapshot');
     if (errorIdx >= 0) get().setCursorPosition(errorIdx);
   },
 

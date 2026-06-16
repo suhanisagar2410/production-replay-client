@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, AlertCircle, Globe, Zap, Clock, ChevronRight, Activity, Trash2 } from 'lucide-react';
+import { Search, Filter, AlertCircle, Globe, Zap, Clock, ChevronRight, Activity, Trash2, Copy, Check, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useReplayStore } from '../store/replayStore';
 import type { Replay } from '../store/replayStore';
-import Onboarding from './Onboarding';
 
 const triggerConfig: Record<string, { color: string; icon: typeof AlertCircle; label: string; badgeClass: string }> = {
   uncaught_exception: { color: 'var(--pr-event-error)', icon: AlertCircle, label: 'Exception', badgeClass: 'badge-error' },
@@ -129,6 +128,85 @@ function ReplayCard({ replay, index }: { replay: Replay; index: number }) {
   );
 }
 
+function EmptyState() {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <div style={{ maxWidth: 640, width: '100%' }}>
+        {/* Live Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40, padding: '16px 24px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 'var(--radius-lg)' }}>
+          <Loader2 size={20} className="spinner" style={{ color: '#3b82f6' }} />
+          <div>
+            <div style={{ fontWeight: 600, color: '#3b82f6' }}>Waiting for first replay...</div>
+            <div style={{ fontSize: 13, color: 'var(--pr-text-secondary)' }}>This page will automatically update when a crash is intercepted.</div>
+          </div>
+        </div>
+
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, marginBottom: 8, color: 'var(--pr-text-primary)' }}>
+          Install the SDK
+        </h1>
+        <p style={{ color: 'var(--pr-text-secondary)', marginBottom: 32 }}>
+          You don't have any replays yet. Install the Production Replay SDK to start capturing errors instantly.
+        </p>
+
+        {/* Step 1 */}
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pr-text-primary)' }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, background: 'var(--pr-depth-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>1</div>
+            Install via npm
+          </h3>
+          <div style={{ position: 'relative' }}>
+            <pre style={{ background: 'var(--pr-depth-0)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--pr-border-soft)', color: '#10b981', fontFamily: 'var(--font-code)', fontSize: 14 }}>
+              npm install @production-replay/sdk
+            </pre>
+            <button 
+              onClick={() => copyCode('npm install @production-replay/sdk', 'npm')}
+              className="btn btn-secondary" 
+              style={{ position: 'absolute', right: 8, top: 8, padding: '4px 8px' }}
+            >
+              {copied === 'npm' ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Step 2 */}
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pr-text-primary)' }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, background: 'var(--pr-depth-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>2</div>
+            Initialize at the top of your app
+          </h3>
+          <div style={{ position: 'relative' }}>
+            <pre style={{ background: 'var(--pr-depth-0)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--pr-border-soft)', fontFamily: 'var(--font-code)', fontSize: 13, lineHeight: 1.5, overflowX: 'auto', color: 'var(--pr-text-primary)' }}>
+{`import { replay } from '@production-replay/sdk';
+
+replay.init({
+  apiKey: 'YOUR_API_KEY', // Check Settings for your key
+  serviceName: 'my-express-api',
+  environment: 'development'
+});`}
+            </pre>
+            <button 
+              onClick={() => copyCode(`import { replay } from '@production-replay/sdk';\n\nreplay.init({\n  apiKey: 'YOUR_API_KEY',\n  serviceName: 'my-express-api',\n  environment: 'development'\n});`, 'init')}
+              className="btn btn-secondary" 
+              style={{ position: 'absolute', right: 8, top: 8, padding: '4px 8px' }}
+            >
+              {copied === 'init' ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function ReplayList() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -139,6 +217,16 @@ export default function ReplayList() {
   useEffect(() => {
     fetchReplays();
   }, [fetchReplays]);
+
+  // Live polling when there are no replays
+  useEffect(() => {
+    if (replays.length === 0) {
+      const interval = setInterval(() => {
+        fetchReplays();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [replays.length, fetchReplays]);
 
   // Always show data from API only
   const allReplays = useMemo(() => {
@@ -177,7 +265,7 @@ export default function ReplayList() {
   ];
 
   if (!isLoading && allReplays.length === 0 && !search && filterType === 'all' && filterEnv === 'all' && filterService === 'all') {
-    return <Onboarding />;
+    return <EmptyState />;
   }
 
   return (
