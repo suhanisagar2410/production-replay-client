@@ -1,52 +1,74 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, AlertCircle } from 'lucide-react';
+import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import { Play, Pause, SkipBack, SkipForward, AlertCircle } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const LANE_HEIGHT = 22;   // px per lane
+const LABEL_W    = 56;    // px for right-aligned lane label
+const LANE_GAP   = 4;     // gap between lanes
 
-const EVENT_COLORS: Record<string, string> = {
-  function_call: 'var(--pr-event-function)',
-  http_request: 'var(--pr-event-http)',
-  http_response: 'var(--pr-event-http)',
-  db_query_start: 'var(--pr-event-database)',
-  db_query_end: 'var(--pr-event-database)',
-  error: 'var(--pr-event-error)',
-  manual_capture: 'var(--pr-event-manual)',
-  redis_command: 'var(--pr-event-redis)',
-};
+// Lane definitions
+const LANES = [
+  { key: 'http',    label: 'http',    color: '#60A5FA' },
+  { key: 'db',      label: 'db',      color: '#C084FC' },
+  { key: 'redis',   label: 'redis',   color: '#4ADE80' },
+  { key: 'fn',      label: 'fn calls',color: '#52525B' },
+  { key: 'errors',  label: 'errors',  color: '#F87171' },
+];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getLane(type: string): string {
+  if (type.startsWith('http')) return 'http';
+  if (type.startsWith('db'))   return 'db';
+  if (type === 'redis_command') return 'redis';
+  if (type === 'error' || type === 'v8_crash_snapshot') return 'errors';
+  if (type === 'function_call') return 'fn';
+  return 'fn';
+}
+
+function fmt(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Timeline() {
   const trackRef = useRef<HTMLDivElement>(null);
-  const { currentReplay, cursorPosition, isPlaying, zoomLevel,
-    setCursorPosition, stepForward, stepBackward, togglePlaying,
-    jumpToError, jumpToStart, jumpToEnd, setZoomLevel } = useReplayStore();
-
-  const events = currentReplay?.events || [];
-  const totalDuration = useMemo(() => {
-    if (events.length < 2) return 1000;
-    return events[events.length - 1].timestamp - events[0].timestamp;
-  }, [events]);
-
-  const baseTime = events.length > 0 ? events[0].timestamp : 0;
-
-  /* Auto-play */
-  useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      stepForward();
-    }, 200);
-    return () => clearInterval(interval);
-  }, [isPlaying, stepForward]);
-
+  const minimapRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
-  const seekToPosition = useCallback((clientX: number) => {
-    if (!trackRef.current || events.length === 0) return;
-    const rect = trackRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const targetTime = baseTime + pct * totalDuration;
+  const {
+    currentReplay, cursorPosition, isPlaying,
+    setCursorPosition, stepForward, stepBackward, togglePlaying,
+    jumpToError, jumpToStart, jumpToEnd,
+  } = useReplayStore();
 
-    let closest = 0;
-    let minDist = Infinity;
+  const [zoom, setZoom] = useState<'30s' | '5s' | '1s'>('30s');
+
+  const events = currentReplay?.events || [];
+
+  const baseTime = useMemo(() =>
+    events.length > 0 ? events[0].timestamp : 0,
+  [events]);
+
+  const totalDuration = useMemo(() =>
+    events.length < 2 ? 1000 : events[events.length - 1].timestamp - events[0].timestamp,
+  [events]);
+
+  // Auto-play
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setInterval(() => stepForward(), 200);
+    return () => clearInterval(id);
+  }, [isPlaying, stepForward]);
+
+  // Seek by pixel position in a track container
+  const seekByPct = useCallback((pct: number) => {
+    const targetTime = baseTime + pct * totalDuration;
+    let closest = 0, minDist = Infinity;
     events.forEach((evt, i) => {
       const d = Math.abs(evt.timestamp - targetTime);
       if (d < minDist) { minDist = d; closest = i; }
@@ -54,202 +76,361 @@ export default function Timeline() {
     setCursorPosition(closest);
   }, [events, baseTime, totalDuration, setCursorPosition]);
 
-  /* Dragging event handlers */
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const seekFromMouseEvent = useCallback((clientX: number, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const trackW = rect.width - LABEL_W;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left - LABEL_W) / trackW));
+    seekByPct(pct);
+  }, [seekByPct]);
+
+  // Mouse drag on main lanes
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     isDragging.current = true;
-    seekToPosition(e.clientX);
-  }, [seekToPosition]);
+    seekFromMouseEvent(e.clientX, e.currentTarget);
+  }, [seekFromMouseEvent]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging.current) {
-        requestAnimationFrame(() => {
-          seekToPosition(e.clientX);
-        });
-      }
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging.current || !trackRef.current) return;
+      requestAnimationFrame(() => seekFromMouseEvent(e.clientX, trackRef.current!));
     };
-    const handleMouseUp = () => {
-      isDragging.current = false;
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [seekToPosition]);
+    const onUp = () => { isDragging.current = false; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [seekFromMouseEvent]);
 
+  // Minimap seek
+  const handleMinimapClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!minimapRef.current) return;
+    const rect = minimapRef.current.getBoundingClientRect();
+    const trackW = rect.width - LABEL_W;
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left - LABEL_W) / trackW));
+    seekByPct(pct);
+  }, [seekByPct]);
+
+  // Cursor pct
   const cursorPct = useMemo(() => {
-    if (events.length === 0) return 0;
-    const curEvent = events[cursorPosition];
-    if (!curEvent) return 0;
-    return ((curEvent.timestamp - baseTime) / totalDuration) * 100;
+    if (!events[cursorPosition]) return 0;
+    return ((events[cursorPosition].timestamp - baseTime) / totalDuration) * 100;
   }, [events, cursorPosition, baseTime, totalDuration]);
 
-  const currentTime = events[cursorPosition]?.timestamp;
   const errorIndex = events.findIndex(e => e.type === 'error' || e.type === 'v8_crash_snapshot');
+  const currentTime = events[cursorPosition]?.timestamp;
+
+  // Build lane event lists
+  const laneEvents = useMemo(() => {
+    const map: Record<string, typeof events> = { http: [], db: [], redis: [], fn: [], errors: [] };
+    events.forEach(evt => {
+      const lane = getLane(evt.type);
+      if (map[lane]) map[lane].push(evt);
+    });
+    return map;
+  }, [events]);
+
+  // Time ruler ticks (6 evenly spaced)
+  const ticks = useMemo(() => {
+    const count = 6;
+    return Array.from({ length: count }, (_, i) => {
+      const pct = (i / (count - 1)) * 100;
+      const ms = (pct / 100) * totalDuration;
+      return { pct, label: fmt(ms) };
+    });
+  }, [totalDuration]);
+
+  // HTTP durations (from httpCaptures if available)
+  const httpCaptures = currentReplay?.httpCaptures || [];
+
+  if (events.length === 0) {
+    return (
+      <div style={{
+        height: 48, background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, color: 'var(--text3)', flexShrink: 0,
+      }}>
+        No events to display
+      </div>
+    );
+  }
 
   return (
     <div style={{
-      height: 120,
-      background: 'var(--pr-depth-1)',
-      borderTop: '0.5px solid var(--pr-border-soft)',
+      background: 'var(--bg2)',
+      borderTop: '1px solid var(--border)',
+      flexShrink: 0,
       display: 'flex',
       flexDirection: 'column',
-      padding: '8px 16px',
-      gap: 4,
-      flexShrink: 0,
+      userSelect: 'none',
     }}>
-      {/* Minimap */}
+
+      {/* ── Controls row ──────────────────────────────────────────────── */}
       <div style={{
-        height: 20,
-        background: 'var(--pr-depth-2)',
-        borderRadius: 'var(--radius-sm)',
-        position: 'relative',
-        overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 12px', borderBottom: '1px solid var(--border)',
+        gap: 8,
       }}>
-        {events.map((evt, i) => {
-          const pct = ((evt.timestamp - baseTime) / totalDuration) * 100;
-          return (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                left: `${pct}%`,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: (evt.type === 'error' || evt.type === 'v8_crash_snapshot') ? 4 : 2,
-                height: (evt.type === 'error' || evt.type === 'v8_crash_snapshot') ? 14 : 8,
-                background: EVENT_COLORS[evt.type] || 'var(--pr-event-error)',
-                borderRadius: 1,
-                opacity: 0.7,
-              }}
-            />
-          );
-        })}
-        {/* Visible range indicator */}
-        <div style={{
-          position: 'absolute',
-          left: `${Math.max(0, cursorPct - 15)}%`,
-          width: '30%',
-          top: 0, bottom: 0,
-          background: 'rgba(99, 102, 241, 0.1)',
-          border: '0.5px solid rgba(99, 102, 241, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-        }} />
-      </div>
-
-      {/* Main Track */}
-      <div
-        ref={trackRef}
-        onMouseDown={handleMouseDown}
-        style={{
-          flex: 1,
-          background: 'var(--pr-depth-2)',
-          borderRadius: 'var(--radius-sm)',
-          position: 'relative',
-          cursor: 'crosshair',
-          overflow: 'hidden',
-          minHeight: 56,
-        }}
-      >
-        {/* Event dots */}
-        {events.map((evt, i) => {
-          const pct = ((evt.timestamp - baseTime) / totalDuration) * 100;
-          const isError = evt.type === 'error' || evt.type === 'v8_crash_snapshot';
-          return (
-            <div
-              key={i}
-              className={isError ? 'event-error-dot' : ''}
-              style={{
-                position: 'absolute',
-                left: `${pct}%`,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: isError ? 6 : evt.type.startsWith('http') || evt.type.startsWith('db') ? 4 : 3,
-                height: isError ? 6 : evt.type.startsWith('http') || evt.type.startsWith('db') ? 16 : 12,
-                background: EVENT_COLORS[evt.type] || 'var(--pr-event-error)',
-                borderRadius: isError ? '50%' : 2,
-                boxShadow: isError ? '0 0 12px 2px rgba(239, 68, 68, 0.8)' : 'none',
-                cursor: 'pointer',
-                transition: 'transform 80ms',
-                zIndex: isError ? 5 : 1,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-50%) scale(1.5)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(-50%)'; }}
-              onClick={e => { e.stopPropagation(); setCursorPosition(i); }}
-            />
-          );
-        })}
-
-        {/* Cursor line */}
-        <div style={{
-          position: 'absolute',
-          left: `${cursorPct}%`,
-          top: 0,
-          bottom: 0,
-          width: 1.5,
-          background: 'white',
-          boxShadow: '0 0 8px rgba(255,255,255,0.6)',
-          zIndex: 10,
-          pointerEvents: 'none',
-          transition: 'left 80ms var(--ease-spring)',
-        }} />
-      </div>
-
-      {/* Controls bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 24,
-        fontSize: 11,
-        color: 'var(--pr-text-tertiary)',
-        fontFamily: 'var(--font-code)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={jumpToStart} aria-label="Jump to start">
-            <SkipBack size={14} />
-          </button>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={() => stepBackward()} aria-label="Step back">
-            <SkipBack size={12} />
-          </button>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={togglePlaying} aria-label={isPlaying ? 'Pause' : 'Play'}>
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={() => stepForward()} aria-label="Step forward">
-            <SkipForward size={12} />
-          </button>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={jumpToEnd} aria-label="Jump to end">
-            <SkipForward size={14} />
-          </button>
-
-          {errorIndex >= 0 && (
-            <button className="btn btn-ghost btn-xs" onClick={jumpToError}
-              style={{ color: 'var(--pr-event-error)', gap: 4 }}>
-              <AlertCircle size={12} /> Jump to Error
-            </button>
-          )}
-        </div>
-
+        {/* Left: title + id */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>{cursorPosition + 1} / {events.length} events</span>
-          {currentTime && (
-            <span style={{ color: 'var(--pr-text-secondary)' }}>
-              +{((currentTime - baseTime)).toFixed(0)}ms
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)' }}>Execution timeline</span>
+          {currentReplay && (
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
+              {currentReplay.id?.slice(0, 12)}… · {currentReplay.errorMessage?.slice(0, 30) || 'no error'}
             </span>
           )}
         </div>
 
+        {/* Center: playback controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={() => setZoomLevel(zoomLevel - 1)} aria-label="Zoom out">
-            <ZoomOut size={14} />
+          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={jumpToStart} title="Jump to start"><SkipBack size={13} /></button>
+          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={() => stepBackward()} title="Step back"><SkipBack size={11} /></button>
+          <button className="btn btn-ghost btn-icon" style={{ padding: 4 }} onClick={togglePlaying} title={isPlaying ? 'Pause' : 'Play'}>
+            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
           </button>
-          <span>{zoomLevel}x</span>
-          <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={() => setZoomLevel(zoomLevel + 1)} aria-label="Zoom in">
-            <ZoomIn size={14} />
-          </button>
+          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={() => stepForward()} title="Step forward"><SkipForward size={11} /></button>
+          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={jumpToEnd} title="Jump to end"><SkipForward size={13} /></button>
+
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)', marginLeft: 4 }}>
+            {currentTime ? `+${(currentTime - baseTime).toFixed(0)}ms` : '0ms'}
+          </span>
+          <span style={{ fontSize: 10, color: 'var(--text3)' }}>
+            ({cursorPosition + 1}/{events.length})
+          </span>
         </div>
+
+        {/* Right: zoom + jump to error */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Zoom window selector */}
+          <div className="tab-list" style={{ padding: 1 }}>
+            {(['30s', '5s', '1s'] as const).map(z => (
+              <button key={z} className={`tab${zoom === z ? ' active' : ''}`}
+                style={{ padding: '2px 7px', fontSize: 10 }}
+                onClick={() => setZoom(z)}>{z}</button>
+            ))}
+          </div>
+
+          {errorIndex >= 0 && (
+            <button
+              className="btn btn-xs"
+              onClick={jumpToError}
+              style={{ color: 'var(--red)', borderColor: '#7F0000', background: 'var(--red-dim)', gap: 4, fontSize: 11 }}
+            >
+              <AlertCircle size={11} />
+              Jump to Error
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Time ruler ───────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', paddingRight: 0,
+        height: 18, position: 'relative',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg)',
+      }}>
+        {/* spacer for label column */}
+        <div style={{ width: LABEL_W, flexShrink: 0 }} />
+        <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+          {ticks.map((t, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: `${t.pct}%`,
+              top: 0, bottom: 0,
+              display: 'flex', alignItems: 'center',
+              transform: i === 0 ? 'none' : i === ticks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+            }}>
+              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                {t.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 5 Lane tracks ─────────────────────────────────────────────── */}
+      <div
+        ref={trackRef}
+        onMouseDown={handleMouseDown}
+        style={{ position: 'relative', cursor: 'crosshair', padding: `${LANE_GAP}px 0` }}
+      >
+        {LANES.map((lane) => {
+          const laneEvts = laneEvents[lane.key] || [];
+          return (
+            <div key={lane.key} style={{
+              display: 'flex', alignItems: 'center',
+              height: LANE_HEIGHT, marginBottom: LANE_GAP,
+            }}>
+              {/* Lane label — right-aligned, fixed width */}
+              <div style={{
+                width: LABEL_W, textAlign: 'right', paddingRight: 8,
+                fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
+                flexShrink: 0, lineHeight: `${LANE_HEIGHT}px`,
+              }}>
+                {lane.label}
+              </div>
+
+              {/* Lane track */}
+              <div style={{
+                flex: 1, height: LANE_HEIGHT,
+                background: 'var(--bg3)', borderRadius: 3,
+                position: 'relative', overflow: 'hidden',
+              }}>
+                {/* HTTP spans (use httpCaptures for real durations) */}
+                {lane.key === 'http' && httpCaptures.map((cap, i) => {
+                  const evt = events.find(e => e.type === 'http_request' && (e.data?.url === cap.url || i < 5));
+                  if (!evt) return null;
+                  const startPct = ((evt.timestamp - baseTime) / totalDuration) * 100;
+                  const capDuration = cap.duration ?? 0;
+                  const durationPct = (capDuration / totalDuration) * 100;
+                  return (
+                    <div key={i} title={`${cap.method} ${cap.url} — ${capDuration}ms`} style={{
+                      position: 'absolute',
+                      left: `${startPct}%`, width: `${Math.max(durationPct, 0.5)}%`,
+                      top: 3, bottom: 3,
+                      background: '#60A5FA26',
+                      border: '1px solid #60A5FA66',
+                      borderRadius: '2px',
+                    }} />
+                  );
+                })}
+
+                {/* Event dots / markers */}
+                {laneEvts.map((evt, i) => {
+                  const pct = ((evt.timestamp - baseTime) / totalDuration) * 100;
+                  const isError = lane.key === 'errors';
+                  const isSlowDb = lane.key === 'db' && (evt.data as any)?.durationMs > 100;
+
+                  if (isError) {
+                    // Red square marker
+                    return (
+                      <div key={i}
+                        className="event-error-dot"
+                        onClick={e => { e.stopPropagation(); setCursorPosition(events.indexOf(evt)); }}
+                        title={(evt.data as any)?.message || 'Error'}
+                        style={{
+                          position: 'absolute',
+                          left: `${pct}%`, top: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: 8, height: 8,
+                          background: '#F87171',
+                          borderRadius: 2,
+                          cursor: 'pointer', zIndex: 5,
+                        }} />
+                    );
+                  }
+
+                  return (
+                    <div key={i}
+                      onClick={e => { e.stopPropagation(); setCursorPosition(events.indexOf(evt)); }}
+                      title={`${evt.type} +${(evt.timestamp - baseTime).toFixed(0)}ms`}
+                      style={{
+                        position: 'absolute',
+                        left: `${pct}%`, top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 6, height: 6,
+                        borderRadius: '50%',
+                        background: isSlowDb ? '#FBBF24' : lane.color,
+                        cursor: 'pointer',
+                        zIndex: 2,
+                        transition: 'transform 80ms',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.6)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'translate(-50%, -50%)'; }}
+                    />
+                  );
+                })}
+
+                {/* Cursor line on each lane */}
+                <div style={{
+                  position: 'absolute',
+                  left: `${cursorPct}%`, top: 0, bottom: 0,
+                  width: 1,
+                  background: 'rgba(255,255,255,0.5)',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Minimap overview row ──────────────────────────────────────── */}
+      <div
+        ref={minimapRef}
+        onClick={handleMinimapClick}
+        style={{
+          display: 'flex', alignItems: 'center',
+          borderTop: '1px solid var(--border)',
+          cursor: 'pointer', height: 18,
+          background: 'var(--bg)',
+        }}
+      >
+        {/* label */}
+        <div style={{
+          width: LABEL_W, textAlign: 'right', paddingRight: 8,
+          fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
+          flexShrink: 0,
+        }}>
+          overview
+        </div>
+
+        {/* minimap track */}
+        <div style={{ flex: 1, height: 6, background: 'var(--bg3)', borderRadius: 2, position: 'relative', overflow: 'hidden' }}>
+          {/* All events as 2px colored bars */}
+          {events.map((evt, i) => {
+            const pct = ((evt.timestamp - baseTime) / totalDuration) * 100;
+            const lane = getLane(evt.type);
+            const color = LANES.find(l => l.key === lane)?.color || '#52525B';
+            return (
+              <div key={i} style={{
+                position: 'absolute',
+                left: `${pct}%`, top: 0, bottom: 0,
+                width: 2, background: color, opacity: 0.7,
+              }} />
+            );
+          })}
+
+          {/* Viewport indicator */}
+          <div style={{
+            position: 'absolute',
+            left: `${Math.max(0, cursorPct - 15)}%`,
+            width: '30%', top: 0, bottom: 0,
+            background: 'rgba(96,165,250,0.12)',
+            border: '1px solid rgba(96,165,250,0.35)',
+            borderRadius: 2,
+          }} />
+        </div>
+      </div>
+
+      {/* ── Legend row ────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '5px 12px 5px', paddingLeft: LABEL_W + 12,
+        borderTop: '1px solid var(--border)',
+        flexWrap: 'wrap',
+      }}>
+        {/* span types */}
+        {[
+          { label: 'HTTP span',   color: '#60A5FA', type: 'span' },
+          { label: 'HTTP event',  color: '#60A5FA', type: 'dot' },
+          { label: 'DB span',     color: '#C084FC', type: 'span' },
+          { label: 'Slow query',  color: '#FBBF24', type: 'dot' },
+          { label: 'Cache hit',   color: '#4ADE80', type: 'dot' },
+          { label: 'Fn call',     color: '#52525B', type: 'dot' },
+          { label: 'Error',       color: '#F87171', type: 'square' },
+        ].map(item => (
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text3)' }}>
+            {item.type === 'span' ? (
+              <div style={{ width: 14, height: 6, background: item.color + '33', border: `1px solid ${item.color}66`, borderRadius: 1 }} />
+            ) : item.type === 'square' ? (
+              <div style={{ width: 7, height: 7, background: item.color, borderRadius: 1 }} />
+            ) : (
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: item.color }} />
+            )}
+            <span>{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

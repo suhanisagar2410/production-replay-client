@@ -78,9 +78,9 @@ export default function ReplayViewer() {
     return (
       <div style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--pr-text-tertiary)',
+        color: 'var(--text3)',
       }}>
-        <div className="skeleton" style={{ width: 200, height: 20, borderRadius: 'var(--radius-md)' }} />
+        <div className="skeleton" style={{ width: 200, height: 16, borderRadius: 6 }} />
       </div>
     );
   }
@@ -101,107 +101,132 @@ export default function ReplayViewer() {
 
   return (
     <div className="panel-enter" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* TOP BAR — 36px fixed */}
+      {/* TOP BAR */}
       <div style={{
-        height: 36,
-        minHeight: 36,
-        background: 'var(--pr-depth-1)',
-        borderBottom: '0.5px solid var(--pr-border-soft)',
+        height: 38,
+        minHeight: 38,
+        background: 'var(--bg2)',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 16px',
-        gap: 16,
+        padding: '0 12px',
+        gap: 10,
         fontSize: 12,
-        fontFamily: 'var(--font-code)',
+        fontFamily: 'var(--font-mono)',
+        flexShrink: 0,
       }}>
-        <button className="btn btn-ghost btn-icon" style={{ padding: 2 }} onClick={() => navigate('/replays')} aria-label="Back">
-          <ArrowLeft size={14} />
+        <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={() => navigate('/replays')} aria-label="Back">
+          <ArrowLeft size={13} />
         </button>
 
-        <span style={{ color: 'var(--pr-text-tertiary)' }}>{currentReplay.id}</span>
-        <span style={{ color: 'var(--pr-border-medium)' }}>·</span>
+        <span style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{currentReplay.id?.slice(0,14)}…</span>
 
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--pr-text-secondary)' }}>
-          <Clock size={12} />
+        <span style={{ color: 'var(--border2)' }}>·</span>
+
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text2)', fontSize: 11 }}>
+          <Clock size={11} />
           {new Date(currentReplay.capturedAt).toLocaleString()}
         </span>
-        <span style={{ color: 'var(--pr-border-medium)' }}>·</span>
 
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--pr-text-secondary)' }}>
-          <Server size={12} />
+        <span style={{ color: 'var(--border2)' }}>·</span>
+
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text2)', fontSize: 11 }}>
+          <Server size={11} />
           {currentReplay.serviceName}
         </span>
-        <span style={{ color: 'var(--pr-border-medium)' }}>·</span>
 
-        <span className="badge badge-error" style={{ fontSize: 11 }}>
-          <AlertCircle size={10} />
-          {currentReplay.triggerType.replace(/_/g, ' ')}
+        <span className="badge badge-crash" style={{ fontSize: 10 }}>
+          {currentReplay.triggerType.replace(/_/g, ' ').toUpperCase()}
         </span>
 
-        <span style={{ fontFamily: 'var(--font-code)', color: 'var(--pr-text-tertiary)' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text3)', fontSize: 11 }}>
           {currentReplay.durationMs}ms
         </span>
 
         {traceReplays.length > 1 && (
-          <>
-            <span style={{ color: 'var(--pr-border-medium)' }}>·</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ color: 'var(--pr-text-tertiary)', fontSize: 10, textTransform: 'uppercase', marginRight: 4 }}>Trace chain:</span>
-              {traceReplays.map(tr => (
-                <button
-                  key={tr.id}
-                  onClick={() => navigate(`/replays/${tr.id}`)}
-                  className={`badge ${tr.id === currentReplay.id ? '' : 'badge-neutral'}`}
-                  style={{ 
-                    cursor: 'pointer', transition: 'all 0.2s', 
-                    opacity: tr.id === currentReplay.id ? 1 : 0.6,
-                    background: tr.id === currentReplay.id ? 'var(--pr-accent-primary)' : '',
-                    color: tr.id === currentReplay.id ? 'white' : ''
-                  }}
-                  title={`View replay for ${tr.serviceName}`}
-                >
-                  <Server size={10} style={{ marginRight: 4 }} />
-                  {tr.serviceName}
-                </button>
-              ))}
-            </div>
-          </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ color: 'var(--text3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trace:</span>
+            {traceReplays.map(tr => (
+              <button
+                key={tr.id}
+                onClick={() => navigate(`/replays/${tr.id}`)}
+                className="badge"
+                style={{
+                  cursor: 'pointer',
+                  background: tr.id === currentReplay.id ? 'var(--blue-dim)' : 'var(--bg3)',
+                  color: tr.id === currentReplay.id ? 'var(--blue)' : 'var(--text2)',
+                  border: `1px solid ${tr.id === currentReplay.id ? 'var(--blue-dim)' : 'var(--border)'}`,
+                }}
+              >
+                <Server size={9} />
+                {tr.serviceName}
+              </button>
+            ))}
+          </div>
         )}
 
         <div style={{ flex: 1 }} />
 
         {currentReplay.events.some(e => e.type === 'error' || e.type === 'v8_crash_snapshot') && (
-          <button 
-            className="btn" 
+          <button
+            className="btn btn-xs"
             onClick={() => useReplayStore.getState().jumpToError()}
-            style={{ 
-              background: 'var(--pr-danger)', color: 'white', border: 'none',
-              display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, padding: '4px 12px',
-              boxShadow: '0 0 12px rgba(239,68,68,0.4)',
-            }}
+            style={{ color: 'var(--red)', borderColor: '#7F0000', background: 'var(--red-dim)', gap: 4 }}
           >
-            Jump to Error &rarr;
+            <AlertCircle size={11} /> Jump to Error
           </button>
         )}
 
         <button className="btn btn-ghost btn-xs" style={{ gap: 4 }}>
-          <Share2 size={12} /> Share
+          <Share2 size={11} /> Share
         </button>
       </div>
 
+      {/* ERROR BANNER — shown when replay has an error */}
+      {currentReplay.errorMessage && (
+        <div style={{
+          background: 'var(--red-dim)',
+          borderBottom: '1px solid #7F0000',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <AlertCircle size={13} style={{ color: 'var(--red)', flexShrink: 0 }} />
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--red)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {currentReplay.errorMessage}
+            </span>
+          </div>
+          {currentReplay.errorStack && (
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--red)',
+              opacity: 0.7, flexShrink: 0,
+            }}>
+              {currentReplay.errorStack.split('\n')[1]?.trim() || ''}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* 3-PANEL BODY */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* LEFT PANEL — 30% */}
+        {/* LEFT PANEL */}
         <div style={{
-          width: '28%',
-          minWidth: 240,
-          borderRight: '0.5px solid var(--pr-border-soft)',
+          width: '26%',
+          minWidth: 220,
+          borderRight: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: 'var(--pr-depth-1)',
+          background: 'var(--bg2)',
         }}>
-          <div style={{ flex: '0 0 auto', maxHeight: '45%', overflow: 'auto', borderBottom: '0.5px solid var(--pr-border-subtle)' }}>
+          <div style={{ flex: '0 0 auto', maxHeight: '45%', overflow: 'auto', borderBottom: '1px solid var(--border)' }}>
             <CallStack />
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
@@ -209,13 +234,13 @@ export default function ReplayViewer() {
           </div>
         </div>
 
-        {/* CENTER PANEL — 42% */}
+        {/* CENTER PANEL */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: 'var(--pr-depth-0)',
+          background: 'var(--bg)',
         }}>
           {/* Current event detail */}
           {currentEvent ? (
@@ -328,32 +353,29 @@ export default function ReplayViewer() {
           )}
         </div>
 
-        {/* RIGHT PANEL — 30% */}
+        {/* RIGHT PANEL */}
         <div style={{
-          width: '28%',
-          minWidth: 240,
-          borderLeft: '0.5px solid var(--pr-border-soft)',
+          width: '26%',
+          minWidth: 220,
+          borderLeft: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: 'var(--pr-depth-1)',
+          background: 'var(--bg2)',
         }}>
           {/* Tabs */}
-          <div className="tab-list" style={{ margin: 8, flexShrink: 0 }}>
-            <button className={`tab ${rightTab === 'http' ? 'active' : ''}`} onClick={() => setRightTab('http')}>
-              <Globe size={12} style={{ marginRight: 4 }} />
-              HTTP
-              <span className="tab-count">{currentReplay.httpCaptures.length}</span>
+          <div className="tab-list" style={{ margin: '6px 8px', flexShrink: 0 }}>
+            <button id="tab-http" className={`tab${rightTab === 'http' ? ' active' : ''}`} onClick={() => setRightTab('http')}>
+              <Globe size={11} style={{ marginRight: 3 }} />
+              HTTP <span className="tab-count">{currentReplay.httpCaptures.length}</span>
             </button>
-            <button className={`tab ${rightTab === 'db' ? 'active' : ''}`} onClick={() => setRightTab('db')}>
-              <Database size={12} style={{ marginRight: 4 }} />
-              DB
-              <span className="tab-count">{currentReplay.dbQueries.length}</span>
+            <button id="tab-db" className={`tab${rightTab === 'db' ? ' active' : ''}`} onClick={() => setRightTab('db')}>
+              <Database size={11} style={{ marginRight: 3 }} />
+              DB <span className="tab-count">{currentReplay.dbQueries.length}</span>
             </button>
-            <button className={`tab ${rightTab === 'events' ? 'active' : ''}`} onClick={() => setRightTab('events')}>
-              <Activity size={12} style={{ marginRight: 4 }} />
-              Events
-              <span className="tab-count">{currentReplay.events.length}</span>
+            <button id="tab-events" className={`tab${rightTab === 'events' ? ' active' : ''}`} onClick={() => setRightTab('events')}>
+              <Activity size={11} style={{ marginRight: 3 }} />
+              Events <span className="tab-count">{currentReplay.events.length}</span>
             </button>
           </div>
 
@@ -370,24 +392,24 @@ export default function ReplayViewer() {
                     <div
                       key={evt.id}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px',
                         cursor: 'pointer',
-                        background: isCurrent ? 'var(--pr-depth-3)' : 'transparent',
-                        borderLeft: isCurrent ? `2px solid ${info?.color || 'var(--pr-text-tertiary)'}` : '2px solid transparent',
+                        background: isCurrent ? 'var(--bg3)' : 'transparent',
+                        borderLeft: isCurrent ? `2px solid ${info?.color || 'var(--text3)'}` : '2px solid transparent',
                         transition: 'background 80ms',
                       }}
                       onClick={() => useReplayStore.getState().setCursorPosition(i)}
-                      onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = 'var(--pr-depth-2)'; }}
+                      onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = 'var(--bg3)'; }}
                       onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.background = 'transparent'; }}
                     >
                       <div style={{
                         width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                        background: info?.color || 'var(--pr-text-tertiary)',
+                        background: info?.color || 'var(--text3)',
                       }} />
-                      <span style={{ fontFamily: 'var(--font-code)', fontSize: 11, color: 'var(--pr-text-secondary)', flex: 1 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text2)', flex: 1 }}>
                         {info?.label || evt.type}
                       </span>
-                      <span style={{ fontFamily: 'var(--font-code)', fontSize: 10, color: 'var(--pr-text-tertiary)' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text3)' }}>
                         +{(evt.timestamp - (currentReplay.events![0]?.timestamp || 0)).toFixed(0)}ms
                       </span>
                     </div>
