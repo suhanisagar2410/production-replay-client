@@ -70,6 +70,8 @@ export interface Replay {
   durationMs: number;
   eventCount: number;
   capturedAt: string;
+  severity?: 'critical' | 'error' | 'warning' | 'info';
+  sdkVersion?: string;
   events?: ExecutionEvent[];
   httpCaptures?: HttpCapture[];
   dbQueries?: DbQuery[];
@@ -119,8 +121,11 @@ interface ReplayState {
   setZoomCenter: (center: number) => void;
   setSelectedEvent: (event: ExecutionEvent | null) => void;
   toggleVariableExpand: (path: string) => void;
+  activeProjectId: string | null;
+  setActiveProjectId: (id: string | null) => void;
   fetchReplays: () => Promise<void>;
   fetchReplayById: (id: string) => Promise<void>;
+  fetchPublicReplayById: (shareToken: string) => Promise<void>;
   clearAllReplays: () => Promise<void>;
 }
 
@@ -138,6 +143,16 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   callStack: [],
   expandedVariables: new Set(),
   traceReplays: [],
+  activeProjectId: localStorage.getItem('activeProjectId') || null,
+  setActiveProjectId: (id) => {
+    if (id) {
+      localStorage.setItem('activeProjectId', id);
+    } else {
+      localStorage.removeItem('activeProjectId');
+    }
+    set({ activeProjectId: id });
+    get().fetchReplays();
+  },
 
   setCurrentReplay: (replay) => set({ currentReplay: replay, cursorPosition: 0, isPlaying: false }),
   setReplays: (replays) => set({ replays }),
@@ -224,7 +239,8 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { fetchReplays: apiFetchReplays } = await import('../api');
-      const liveReplays = await apiFetchReplays();
+      const { activeProjectId } = get();
+      const liveReplays = await apiFetchReplays(activeProjectId || undefined);
       set({ replays: liveReplays });
     } catch (err) {
       console.warn('Live server is unreachable or unauthorized, continuing with fallback.', err);
@@ -240,6 +256,18 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
       set({ currentReplay: fullReplay as any, cursorPosition: 0 });
     } catch (err) {
       console.error('Failed to load specific replay by ID', err);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  fetchPublicReplayById: async (shareToken: string) => {
+    set({ isLoading: true });
+    try {
+      const { fetchPublicReplay } = await import('../api');
+      const fullReplay = await fetchPublicReplay(shareToken);
+      set({ currentReplay: fullReplay as any, cursorPosition: 0 });
+    } catch (err) {
+      console.error('Failed to load public shared replay', err);
     } finally {
       set({ isLoading: false });
     }

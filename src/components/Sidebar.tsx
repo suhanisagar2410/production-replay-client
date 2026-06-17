@@ -1,7 +1,9 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, List, Zap, Settings, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { LayoutDashboard, List, Zap, Settings, ChevronLeft, ChevronRight, LogOut, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { fetchProjects } from '../api';
+import { useReplayStore } from '../store/replayStore';
 
 const navSections = [
   {
@@ -21,10 +23,30 @@ const navSections = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const { activeProjectId, setActiveProjectId } = useReplayStore();
+
+  useEffect(() => {
+    fetchProjects().then(data => {
+      setProjects(data);
+    }).catch(err => {
+      console.error('Failed to fetch projects', err);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClose = () => setIsOpen(false);
+    window.addEventListener('click', handleClose);
+    return () => window.removeEventListener('click', handleClose);
+  }, [isOpen]);
+
+  const activeProject = projects.find(p => p.id === activeProjectId);
 
   const isActive = (path: string) =>
     path === '/replays'
@@ -80,6 +102,115 @@ export default function Sidebar() {
           }}>
             Production Replay
           </span>
+        )}
+      </div>
+
+      {/* ── Project Switcher ─────────────────── */}
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 10px',
+            background: 'var(--bg3)',
+            border: '1px solid var(--border2)',
+            borderRadius: 6,
+            color: 'var(--text)',
+            cursor: 'pointer',
+            textAlign: 'left',
+            fontSize: 12,
+            justifyContent: collapsed ? 'center' : 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            {/* Health Dot */}
+            <div style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: activeProject ? (activeProject.isHealthy ? 'var(--green)' : 'var(--red)') : 'var(--green)',
+              flexShrink: 0
+            }} />
+            {!collapsed && (
+              <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {activeProject ? activeProject.name : 'All Projects'}
+              </span>
+            )}
+          </div>
+          {!collapsed && <ChevronDown size={12} style={{ color: 'var(--text3)' }} />}
+        </button>
+
+        {isOpen && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 12,
+            right: 12,
+            background: 'var(--bg2)',
+            border: '1px solid var(--border2)',
+            borderRadius: 6,
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)',
+            zIndex: 50,
+            maxHeight: 200,
+            overflowY: 'auto',
+            padding: 4,
+          }}>
+            {/* All Projects Option */}
+            <button
+              onClick={() => { setActiveProjectId(null); setIsOpen(false); }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 8px',
+                borderRadius: 4,
+                background: !activeProjectId ? 'var(--bg3)' : 'transparent',
+                border: 'none',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: 12,
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' }} />
+                <span>All Projects</span>
+              </div>
+            </button>
+
+            {projects.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { setActiveProjectId(p.id); setIsOpen(false); }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  background: activeProjectId === p.id ? 'var(--bg3)' : 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: p.isHealthy ? 'var(--green)' : 'var(--red)',
+                    flexShrink: 0
+                  }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--text3)' }}>{p.replayCount}</span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
 

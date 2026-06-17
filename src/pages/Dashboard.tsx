@@ -5,6 +5,7 @@ import {
 } from 'chart.js';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Activity, RefreshCw } from 'lucide-react';
 import { fetchStats, type DashboardStats } from '../api';
+import { useReplayStore } from '../store/replayStore';
 
 // ─── Register Chart.js components ────────────────────────────────────────────
 Chart.register(
@@ -382,6 +383,43 @@ function EmptyChart({ label }: { label: string }) {
   );
 }
 
+function CircularProgress({ value, size = 44, strokeWidth = 4 }: { value: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (value / 100) * circumference;
+  const color = value > 80 ? '#10B981' : value > 50 ? '#F59E0B' : '#EF4444';
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke="var(--border)"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.35s' }}
+        />
+      </svg>
+      <div style={{ position: 'absolute', fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, trendEl, trendLabel, color }: {
   label: string; value: string; trendEl: React.ReactNode;
@@ -412,21 +450,24 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const activeProjectId = useReplayStore(state => state.activeProjectId);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchStats(range);
+      const data = await fetchStats(range, activeProjectId || undefined);
       setStats(data);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [range]);
+  }, [range, activeProjectId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const healthScore = stats ? Math.max(0, Math.round(100 - (stats.errorRate * 3.5))) : 100;
 
   return (
     <div
@@ -479,7 +520,23 @@ export default function Dashboard() {
       {stats && (
         <>
           {/* ── Stat Cards ─────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 8, padding: '12px 14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>
+                  Health Score
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: healthScore > 80 ? 'var(--green)' : healthScore > 50 ? 'var(--amber)' : 'var(--red)' }}>
+                  {healthScore > 80 ? 'Healthy' : healthScore > 50 ? 'Warning' : 'Degraded'}
+                </div>
+              </div>
+              <CircularProgress value={healthScore} />
+            </div>
             <StatCard
               label="Total Replays"
               value={stats.totalReplays.toLocaleString()}

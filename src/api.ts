@@ -23,6 +23,8 @@ export interface ReplayMetadata {
   durationMs: number;
   eventCount: number;
   capturedAt: string;
+  severity?: 'critical' | 'error' | 'warning' | 'info';
+  sdkVersion?: string;
 }
 
 export interface HttpCapture {
@@ -49,8 +51,11 @@ export interface ReplayPayload extends ReplayMetadata {
   dbQueries: DbQuery[];
 }
 
-export async function fetchReplays(): Promise<ReplayMetadata[]> {
-  const res = await fetch(`${API_BASE_URL}/replays`, { headers: getHeaders() });
+export async function fetchReplays(projectId?: string): Promise<ReplayMetadata[]> {
+  const url = projectId 
+    ? `${API_BASE_URL}/replays?projectId=${encodeURIComponent(projectId)}`
+    : `${API_BASE_URL}/replays`;
+  const res = await fetch(url, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch replays');
   return res.json();
 }
@@ -115,9 +120,29 @@ export interface DashboardStats {
   dbQueryPerf: { table: string; avgMs: number }[];
 }
 
-export async function fetchStats(range: '24h' | '7d' | '30d'): Promise<DashboardStats> {
-  const res = await fetch(`${API_BASE_URL}/stats?range=${range}`, { headers: getHeaders() });
+export async function fetchStats(range: '24h' | '7d' | '30d', projectId?: string): Promise<DashboardStats> {
+  const url = projectId
+    ? `${API_BASE_URL}/stats?range=${range}&projectId=${encodeURIComponent(projectId)}`
+    : `${API_BASE_URL}/stats?range=${range}`;
+  const res = await fetch(url, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch stats');
+  return res.json();
+}
+
+export async function shareReplay(id: string): Promise<{ shareToken: string; shareExpiresAt: string }> {
+  const res = await fetch(`${API_BASE_URL}/replays/${id}/share`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to share replay');
+  return res.json();
+}
+
+export async function fetchPublicReplay(shareToken: string): Promise<ReplayPayload> {
+  const res = await fetch(`${API_BASE_URL}/public/replays/${shareToken}`, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch public shared replay');
   return res.json();
 }
 

@@ -29,27 +29,22 @@ function ReplayCard({ replay, index }: { replay: Replay; index: number }) {
     >
       <div
         style={{
-          background: 'var(--pr-depth-2)',
-          border: '0.5px solid var(--pr-border-soft)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 16,
+          background: 'var(--bg2)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '12px 14px',
           cursor: 'pointer',
           position: 'relative',
           overflow: 'hidden',
-          transition: 'all 150ms var(--ease-smooth)',
-          transformStyle: 'preserve-3d',
+          transition: 'border-color 120ms, background 120ms',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.background = 'var(--pr-depth-3)';
-          e.currentTarget.style.borderColor = 'var(--pr-border-medium)';
-          e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
+          e.currentTarget.style.background = 'var(--bg3)';
+          e.currentTarget.style.borderColor = 'var(--border2)';
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.background = 'var(--pr-depth-2)';
-          e.currentTarget.style.borderColor = 'var(--pr-border-soft)';
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.background = 'var(--bg2)';
+          e.currentTarget.style.borderColor = 'var(--border)';
         }}
       >
         {/* Left accent bar */}
@@ -71,23 +66,44 @@ function ReplayCard({ replay, index }: { replay: Replay; index: number }) {
 
           {/* Content */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <span className={`badge ${config.badgeClass}`}>
-                {config.label}
-              </span>
-              <span className="badge badge-neutral">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+              {/* Severity badge */}
+              {(replay as any).severity && (() => {
+                const sev = (replay as any).severity as string;
+                const sevColor: Record<string, string> = {
+                  critical: '#F87171', error: '#F87171',
+                  warning: '#FBBF24', info: '#60A5FA',
+                };
+                return (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: sevColor[sev] || 'var(--text3)',
+                    background: (sevColor[sev] || '#52525B') + '22',
+                    border: `1px solid ${(sevColor[sev] || '#52525B')}55`,
+                    borderRadius: 4, padding: '1px 6px',
+                  }}>{sev}</span>
+                );
+              })()}
+              <span className={`badge ${config.badgeClass}`}>{config.label}</span>
+              <span className="badge" style={{ background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
                 {replay.serviceName}
               </span>
-              <span className="badge badge-neutral" style={{ fontFamily: 'var(--font-code)' }}>
+              <span className="badge" style={{ background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>
                 {replay.environment}
               </span>
+              {/* SDK version */}
+              {(replay as any).sdkVersion && (
+                <span style={{
+                  fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)',
+                  marginLeft: 'auto',
+                }}>v{(replay as any).sdkVersion}</span>
+              )}
             </div>
 
             {replay.errorMessage && (
               <div style={{
-                fontFamily: 'var(--font-code)', fontSize: 13, color: 'var(--pr-text-primary)',
+                fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text)',
                 marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                lineHeight: 1.4,
               }}>
                 {replay.errorMessage}
               </div>
@@ -103,25 +119,25 @@ function ReplayCard({ replay, index }: { replay: Replay; index: number }) {
             )}
 
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 16,
-              fontSize: 12, color: 'var(--pr-text-tertiary)',
+              display: 'flex', alignItems: 'center', gap: 14,
+              fontSize: 11, color: 'var(--text3)',
             }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Clock size={12} />
+                <Clock size={11} />
                 {formatDistanceToNow(new Date(replay.capturedAt), { addSuffix: true })}
               </span>
-              <span style={{ fontFamily: 'var(--font-code)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>
                 {replay.durationMs}ms
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Activity size={12} />
+                <Activity size={11} />
                 {replay.eventCount} events
               </span>
             </div>
           </div>
 
           {/* Arrow */}
-          <ChevronRight size={16} color="var(--pr-text-tertiary)" style={{ flexShrink: 0, marginTop: 8 }} />
+          <ChevronRight size={14} color="var(--text3)" style={{ flexShrink: 0, marginTop: 4 }} />
         </div>
       </div>
     </div>
@@ -212,6 +228,7 @@ export default function ReplayList() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterEnv, setFilterEnv] = useState<string>('all');
   const [filterService, setFilterService] = useState<string>('all');
+  const [filterSdkVersion, setFilterSdkVersion] = useState<string>('all');
   const { replays, fetchReplays, isLoading } = useReplayStore();
 
   useEffect(() => {
@@ -243,6 +260,11 @@ export default function ReplayList() {
     return ['all', ...Array.from(srvs)];
   }, [allReplays]);
 
+  const sdkVersions = useMemo(() => {
+    const sdks = new Set(allReplays.map(r => (r as any).sdkVersion).filter(Boolean));
+    return ['all', ...Array.from(sdks)];
+  }, [allReplays]);
+
   const filtered = useMemo(() => {
     return allReplays.filter(r => {
       const matchSearch = !search ||
@@ -252,9 +274,10 @@ export default function ReplayList() {
       const matchFilter = filterType === 'all' || r.triggerType === filterType;
       const matchEnv = filterEnv === 'all' || r.environment === filterEnv;
       const matchService = filterService === 'all' || r.serviceName === filterService;
-      return matchSearch && matchFilter && matchEnv && matchService;
+      const matchSdkVersion = filterSdkVersion === 'all' || (r as any).sdkVersion === filterSdkVersion;
+      return matchSearch && matchFilter && matchEnv && matchService && matchSdkVersion;
     });
-  }, [allReplays, search, filterType, filterEnv, filterService]);
+  }, [allReplays, search, filterType, filterEnv, filterService, filterSdkVersion]);
 
   const filterOptions = [
     { value: 'all', label: 'All' },
@@ -264,7 +287,7 @@ export default function ReplayList() {
     { value: 'manual', label: 'Manual' },
   ];
 
-  if (!isLoading && allReplays.length === 0 && !search && filterType === 'all' && filterEnv === 'all' && filterService === 'all') {
+  if (!isLoading && allReplays.length === 0 && !search && filterType === 'all' && filterEnv === 'all' && filterService === 'all' && filterSdkVersion === 'all') {
     return <EmptyState />;
   }
 
@@ -330,6 +353,17 @@ export default function ReplayList() {
         >
           {services.map(srv => (
             <option key={srv} value={srv}>{srv === 'all' ? 'All Services' : srv}</option>
+          ))}
+        </select>
+
+        <select 
+          className="input" 
+          style={{ width: 'auto', paddingRight: 32 }}
+          value={filterSdkVersion}
+          onChange={e => setFilterSdkVersion(e.target.value)}
+        >
+          {sdkVersions.map(ver => (
+            <option key={ver} value={ver}>{ver === 'all' ? 'All SDK Versions' : `SDK v${ver}`}</option>
           ))}
         </select>
 

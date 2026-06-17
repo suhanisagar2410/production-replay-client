@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, Clock, Server, Share2, ArrowLeft, Globe, Database, Activity } from 'lucide-react';
+import { AlertCircle, Clock, Server, Share2, ArrowLeft, Globe, Database, Activity, Check } from 'lucide-react';
 import { useReplayStore } from '../store/replayStore';
 import Timeline from '../components/Timeline';
 import VariableTree from '../components/VariableTree';
@@ -9,23 +9,44 @@ import NetworkPanel from '../components/NetworkPanel';
 import QueryPanel from '../components/QueryPanel';
 
 export default function ReplayViewer() {
-  const { id } = useParams<{ id: string }>();
+  const { id, shareToken } = useParams<{ id?: string; shareToken?: string }>();
   const navigate = useNavigate();
-  const { currentReplay, setCurrentReplay, cursorPosition, fetchReplayById, traceReplays, fetchTraceReplays } = useReplayStore();
+  const { currentReplay, setCurrentReplay, cursorPosition, fetchReplayById, fetchPublicReplayById, traceReplays, fetchTraceReplays } = useReplayStore();
   const [rightTab, setRightTab] = useState<'http' | 'db' | 'events'>('http');
+  const [sharing, setSharing] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  const handleShare = async () => {
+    if (!currentReplay?.id) return;
+    setSharing(true);
+    try {
+      const { shareReplay } = await import('../api');
+      const { shareToken } = await shareReplay(currentReplay.id);
+      const url = `${window.location.origin}/shared/${shareToken}`;
+      await navigator.clipboard.writeText(url);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2500);
+    } catch (err) {
+      console.error('Failed to share replay', err);
+    } finally {
+      setSharing(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
       fetchReplayById(id);
+    } else if (shareToken) {
+      fetchPublicReplayById(shareToken);
     }
     return () => setCurrentReplay(null);
-  }, [id, setCurrentReplay, fetchReplayById]);
+  }, [id, shareToken, setCurrentReplay, fetchReplayById, fetchPublicReplayById]);
 
   useEffect(() => {
-    if (currentReplay?.id) {
+    if (currentReplay?.id && !shareToken) {
       fetchTraceReplays(currentReplay.id);
     }
-  }, [currentReplay?.id, fetchTraceReplays]);
+  }, [currentReplay?.id, shareToken, fetchTraceReplays]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -115,9 +136,11 @@ export default function ReplayViewer() {
         fontFamily: 'var(--font-mono)',
         flexShrink: 0,
       }}>
-        <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={() => navigate('/replays')} aria-label="Back">
-          <ArrowLeft size={13} />
-        </button>
+        {!shareToken && (
+          <button className="btn btn-ghost btn-icon" style={{ padding: 3 }} onClick={() => navigate('/replays')} aria-label="Back">
+            <ArrowLeft size={13} />
+          </button>
+        )}
 
         <span style={{ color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{currentReplay.id?.slice(0,14)}…</span>
 
@@ -135,6 +158,24 @@ export default function ReplayViewer() {
           {currentReplay.serviceName}
         </span>
 
+        {/* Severity badge */}
+        {currentReplay.severity && (() => {
+          const sev = currentReplay.severity as string;
+          const sevColor: Record<string, string> = {
+            critical: '#F87171', error: '#F87171',
+            warning: '#FBBF24', info: '#60A5FA',
+          };
+          return (
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: sevColor[sev] || 'var(--text3)',
+              background: (sevColor[sev] || '#52525B') + '22',
+              border: `1px solid ${(sevColor[sev] || '#52525B')}55`,
+              borderRadius: 4, padding: '1px 6px',
+            }}>{sev}</span>
+          );
+        })()}
+
         <span className="badge badge-crash" style={{ fontSize: 10 }}>
           {currentReplay.triggerType.replace(/_/g, ' ').toUpperCase()}
         </span>
@@ -142,6 +183,15 @@ export default function ReplayViewer() {
         <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text3)', fontSize: 11 }}>
           {currentReplay.durationMs}ms
         </span>
+
+        {currentReplay.sdkVersion && (
+          <>
+            <span style={{ color: 'var(--border2)' }}>·</span>
+            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text3)', fontSize: 11 }}>
+              SDK v{currentReplay.sdkVersion}
+            </span>
+          </>
+        )}
 
         {traceReplays.length > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -177,9 +227,17 @@ export default function ReplayViewer() {
           </button>
         )}
 
-        <button className="btn btn-ghost btn-xs" style={{ gap: 4 }}>
-          <Share2 size={11} /> Share
-        </button>
+        {!shareToken && (
+          <button 
+            className="btn btn-ghost btn-xs" 
+            style={{ gap: 4, color: copiedShare ? 'var(--green)' : 'inherit' }}
+            onClick={handleShare}
+            disabled={sharing}
+          >
+            {copiedShare ? <Check size={11} /> : <Share2 size={11} />}
+            {copiedShare ? 'Copied!' : sharing ? 'Sharing...' : 'Share'}
+          </button>
+        )}
       </div>
 
       {/* ERROR BANNER — shown when replay has an error */}

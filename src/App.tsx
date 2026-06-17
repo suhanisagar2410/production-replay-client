@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
+import SearchModal from './components/SearchModal';
 import Sidebar from './components/Sidebar';
 import ReplayList from './pages/ReplayList';
 import ReplayViewer from './pages/ReplayViewer';
@@ -47,6 +48,58 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 // Protected layout — sidebar + main content
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let gPressed = false;
+    let gTimeout: number | null = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't run shortcuts if inside input or textarea
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Cmd+K or Ctrl+K toggle search modal
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+        return;
+      }
+
+      // G -> D / G -> R navigation
+      if (e.key === 'g' || e.key === 'G') {
+        gPressed = true;
+        if (gTimeout) clearTimeout(gTimeout);
+        gTimeout = window.setTimeout(() => {
+          gPressed = false;
+        }, 1000);
+        return;
+      }
+
+      if (gPressed) {
+        if (e.key === 'd' || e.key === 'D') {
+          e.preventDefault();
+          navigate('/dashboard');
+          gPressed = false;
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          navigate('/replays');
+          gPressed = false;
+        } else {
+          gPressed = false;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (gTimeout) clearTimeout(gTimeout);
+    };
+  }, [navigate]);
+
   return (
     <div style={{
       display: 'flex',
@@ -59,6 +112,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
         {children}
       </main>
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </div>
   );
 }
@@ -94,6 +148,12 @@ export default function App() {
               <ReplayViewer />
             </ProtectedLayout>
           </AuthGuard>
+        } />
+
+        <Route path="/shared/:shareToken" element={
+          <ProtectedLayout>
+            <ReplayViewer />
+          </ProtectedLayout>
         } />
 
         <Route path="/settings" element={
